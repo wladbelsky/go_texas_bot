@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:latest
 
 MAINTAINER wladbelsky <raf520wb@gmail.com>
 
