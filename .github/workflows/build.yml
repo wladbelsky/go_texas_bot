@@ -42,6 +42,7 @@ jobs:
         name: Download the Build Artifact
         with:
           name: texas_bot
+          path: .
       - uses: actions/checkout@v4
         name: Check out the repository
       - name: Set up QEMU
