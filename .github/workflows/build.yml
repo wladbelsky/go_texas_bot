@@ -62,6 +62,7 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}/texas_bot
       - run: ls -la
+      - run: pwd
       - name: Build
         uses: docker/build-push-action@v5
         with:
