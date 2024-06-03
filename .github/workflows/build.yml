@@ -4,6 +4,7 @@ on:
   push:
     branches:
     - main
+    - ci
   pull_request:
     branches:
     - main
@@ -60,10 +61,12 @@ jobs:
         uses: docker/metadata-action@v5.5.1
         with:
           images: ghcr.io/${{ github.repository }}/texas_bot
+      - run: ls -la
       - name: Build
         uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/${{ github.repository }}/texas_bot:latest
           push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
