@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM alpine:latest
 
 MAINTAINER wladbelsky <raf520wb@gmail.com>
 
@@ -10,4 +10,4 @@ COPY ./texas_bot /app/texas_bot
 
 WORKDIR /app
 
-ENTRYPOINT ["./texas_bot"]
+CMD "/app/texas_bot"
