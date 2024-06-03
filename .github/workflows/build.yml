@@ -39,7 +39,10 @@ jobs:
           path: ./texas_bot_arm64
       - uses: actions/attest-build-provenance@v1
         with:
-          subject-path: ./texas_bot
+          subject-path: ./texas_bot_amd64
+      - uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: ./texas_bot_arm64
 
   build-docker-image:
     runs-on: ubuntu-latest
