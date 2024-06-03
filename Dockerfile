@@ -4,7 +4,7 @@ MAINTAINER wladbelsky <raf520wb@gmail.com>
 
 # texas_bot is the name of the binary file
 # refer to github actions for the binary file name
-ADD ./texas_bot /app/
+COPY ./texas_bot /app/texas_bot
 
 WORKDIR /app
 
