@@ -8,7 +8,7 @@ RUN mkdir "/app"
 
 # texas_bot is the name of the binary file
 # refer to github actions for the binary file name
-COPY ./texas_bot_${TARGETARCH} /app/texas_bot
+ADD ./texas_bot_${TARGETARCH} /app/texas_bot
 
 RUN chmod +x /app/texas_bot
 
