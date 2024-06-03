@@ -19,7 +19,7 @@ func getFlagOrEnvString(flagName string, envName string) string {
 		return os.Getenv(envName)
 	}
 	if fl != nil {
-		return fl.Value.(flag.Getter).Get().(string)
+		return fl.Value.String()
 	}
 	return ""
 }

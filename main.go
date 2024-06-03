@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/gateway"
@@ -15,6 +16,7 @@ import (
 )
 
 func main() {
+	flag.Parse()
 	token := config.Token()
 	if token == "" {
 		log.Panicln("token is required")
@@ -37,8 +39,8 @@ func main() {
 	if err != nil {
 		log.Panicln("error creating client:", err)
 	}
-	client.Rest().SetGuildCommands(client.ApplicationID(), 630848078181826580, command.Commands) //TEST GUILD ID
-	//client.Rest().SetGlobalCommands(client.ApplicationID(), command.Commands)
+
+	client.Rest().SetGlobalCommands(client.ApplicationID(), command.Commands)
 	defer client.Close(mainContext)
 	if err = client.OpenGateway(mainContext); err != nil {
 		log.Panicln("error opening gateway:", err)

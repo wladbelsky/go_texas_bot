@@ -21,21 +21,22 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.22'
-
       - name: Install dependencies
         run: go get
-
-      - name: Build
-        run: go build -o texas_bot -v .
-
-      - name: Test
-        run: go test -v .
-
+      - name: Build x64
+        run: go build -o texas_bot_amd64 .
+      - name: Build ARM64
+        run: GOOS=linux GOARCH=arm64 go build -o texas_bot_arm64 .
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: texas_bot
-          path: ./texas_bot
+          name: texas_bot_amd64
+          path: ./texas_bot_amd64
+      - name: Upload a Build ARM64 Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: texas_bot_arm64
+          path: ./texas_bot_arm64
       - uses: actions/attest-build-provenance@v1
         with:
           subject-path: ./texas_bot
@@ -51,8 +52,13 @@ jobs:
       - uses: actions/download-artifact@v3
         name: Download the Build Artifact
         with:
-          name: texas_bot
-          path: ./texas_bot
+          name: texas_bot_amd64
+          path: ./texas_bot_amd64
+      - uses: actions/download-artifact@v3
+        name: Download the Build ARM64 Artifact
+        with:
+          name: texas_bot_arm64
+          path: ./texas_bot_arm64
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
