@@ -29,7 +29,7 @@ jobs:
         run: go test -v .
 
       - name: Upload a Build Artifact
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v2
         with:
           name: texas_bot
           path: ./texas_bot
