@@ -8,6 +8,7 @@ import (
 	"github.com/disgoorg/disgo/gateway"
 	"go_texas_bot/command"
 	"go_texas_bot/config"
+	"go_texas_bot/db"
 	"log"
 	"log/slog"
 	"os"
@@ -21,6 +22,16 @@ func main() {
 	if token == "" {
 		log.Panicln("token is required")
 	}
+
+	if err := db.Init(config.DBPath()); err != nil {
+		log.Panicln("error opening database:", err)
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			slog.Error("error closing database", "err", err)
+		}
+	}()
+
 	mainContext := context.Background()
 	client, err := disgo.New(
 		token,
@@ -40,7 +51,9 @@ func main() {
 		log.Panicln("error creating client:", err)
 	}
 
-	client.Rest().SetGlobalCommands(client.ApplicationID(), command.Commands)
+	if _, err = client.Rest.SetGlobalCommands(client.ApplicationID, command.Commands); err != nil {
+		log.Panicln("error setting global commands:", err)
+	}
 	defer client.Close(mainContext)
 	if err = client.OpenGateway(mainContext); err != nil {
 		log.Panicln("error opening gateway:", err)

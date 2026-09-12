@@ -64,13 +64,12 @@ func Listener(event *events.ApplicationCommandInteractionCreate) {
 }
 
 func sendError(event *events.ApplicationCommandInteractionCreate, err error) {
-	slog.Error("command error:", err)
-	err = event.CreateMessage(discord.NewMessageCreateBuilder().
-		SetContent("The command failed to execute.\nError: " + err.Error()).
-		SetEphemeral(true).
-		Build(),
+	slog.Error("command error", "err", err)
+	err = event.CreateMessage(discord.NewMessageCreate().
+		WithContent("The command failed to execute.\nError: " + err.Error()).
+		WithEphemeral(true),
 	)
 	if err != nil {
-		slog.Error("error sending error message:", err)
+		slog.Error("error sending error message", "err", err)
 	}
 }

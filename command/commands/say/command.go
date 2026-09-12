@@ -12,10 +12,9 @@ func init() {
 
 func sayCommandListener(event *events.ApplicationCommandInteractionCreate) error {
 	data := event.SlashCommandInteractionData()
-	err := event.CreateMessage(discord.NewMessageCreateBuilder().
-		SetContent(data.String("message")).
-		SetEphemeral(data.Bool("ephemeral")).
-		Build(),
+	err := event.CreateMessage(discord.NewMessageCreate().
+		WithContent(data.String("message")).
+		WithEphemeral(data.Bool("ephemeral")),
 	)
 	return err
 }

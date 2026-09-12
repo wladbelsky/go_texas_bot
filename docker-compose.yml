@@ -28,6 +28,7 @@ services:
       - LAVALINK_PORT=2333
       - LAVALINK_PASSWORD=youshallnotpass
       - BOT_TOKEN=yourbottoken
+      - DB_PATH=/app/data/texas_bot.db
     networks:
       - lavalink
     volumes:
