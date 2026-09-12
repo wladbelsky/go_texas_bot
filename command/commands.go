@@ -48,7 +48,44 @@ var Commands = []discord.ApplicationCommandCreate{
 			},
 		},
 	},
+	discord.SlashCommandCreate{
+		Name:        "ark",
+		Description: "Кидает рандомную девочку (или кунчика) и сохраняет её в коллекцию",
+		NSFW:        boolPtr(true),
+	},
+	discord.SlashCommandCreate{
+		Name:        "myark",
+		Description: "Показать свою коллекцию операторов Arknights (или конкретного персонажа)",
+		NSFW:        boolPtr(true),
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionString{
+				Name:        "character",
+				Description: "Имя персонажа",
+			},
+			discord.ApplicationCommandOptionBool{
+				Name:        "public",
+				Description: "Показать ответ всем, а не только тебе",
+			},
+		},
+	},
+	discord.SlashCommandCreate{
+		Name:        "barter",
+		Description: "Обменять дубликаты операторов на более редких",
+		NSFW:        boolPtr(true),
+	},
+	discord.SlashCommandCreate{
+		Name:        "settings",
+		Description: "Настройки бота для этого сервера (только для администраторов)",
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionBool{
+				Name:        "nsfw-content",
+				Description: "Включить NSFW-контент (симулятор кейсов Arknights и т.п.) на этом сервере",
+			},
+		},
+	},
 }
+
+func boolPtr(v bool) *bool { return &v }
 
 func Listener(event *events.ApplicationCommandInteractionCreate) {
 	data := event.SlashCommandInteractionData()
