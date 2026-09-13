@@ -83,9 +83,85 @@ var Commands = []discord.ApplicationCommandCreate{
 			},
 		},
 	},
+	discord.SlashCommandCreate{
+		Name:        "play",
+		Description: "Найти и включить музыку (YouTube, ссылка или поиск)",
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionString{
+				Name:        "query",
+				Description: "Поисковый запрос или ссылка",
+				Required:    true,
+			},
+		},
+	},
+	discord.SlashCommandCreate{
+		Name:        "skip",
+		Description: "Пропустить текущий трек",
+	},
+	discord.SlashCommandCreate{
+		Name:        "stop",
+		Description: "Остановить музыку и очистить очередь",
+	},
+	discord.SlashCommandCreate{
+		Name:        "queue",
+		Description: "Показать очередь",
+	},
+	discord.SlashCommandCreate{
+		Name:        "disconnect",
+		Description: "Отключиться от голосового канала",
+	},
+	discord.SlashCommandCreate{
+		Name:        "shuffle",
+		Description: "Перемешать очередь",
+	},
+	discord.SlashCommandCreate{
+		Name:        "repeat",
+		Description: "Установить режим повтора",
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionString{
+				Name:        "mode",
+				Description: "Режим повтора",
+				Required:    true,
+				Choices: []discord.ApplicationCommandOptionChoiceString{
+					{Name: "Выключен", Value: "none"},
+					{Name: "Один трек", Value: "one"},
+					{Name: "Вся очередь", Value: "all"},
+				},
+			},
+		},
+	},
+	discord.SlashCommandCreate{
+		Name:        "skipto",
+		Description: "Перейти сразу к треку под номером в очереди",
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionInt{
+				Name:        "index",
+				Description: "Номер трека в очереди",
+				Required:    true,
+				MinValue:    intPtr(1),
+			},
+		},
+	},
+	discord.SlashCommandCreate{
+		Name:        "pop",
+		Description: "Удалить трек из очереди по номеру",
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionInt{
+				Name:        "index",
+				Description: "Номер трека в очереди",
+				Required:    true,
+				MinValue:    intPtr(1),
+			},
+		},
+	},
+	discord.SlashCommandCreate{
+		Name:        "controls",
+		Description: "Показать плеер с кнопками управления",
+	},
 }
 
 func boolPtr(v bool) *bool { return &v }
+func intPtr(v int) *int    { return &v }
 
 func Listener(event *events.ApplicationCommandInteractionCreate) {
 	data := event.SlashCommandInteractionData()

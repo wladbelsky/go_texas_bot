@@ -7,6 +7,10 @@ services:
       - _JAVA_OPTIONS=-Xmx4G
       - SERVER_PORT=2333
       - LAVALINK_SERVER_PASSWORD=youshallnotpass
+      # Required for Spotify link/search support (LavaSrc plugin, see application.yml).
+      # Create an app at https://developer.spotify.com/dashboard to get these.
+      - SPOTIFY_CLIENT_ID=yourspotifyclientid
+      - SPOTIFY_CLIENT_SECRET=yourspotifyclientsecret
     volumes:
       - ./application.yml:/opt/Lavalink/application.yml
       - ./plugins/:/opt/Lavalink/plugins/

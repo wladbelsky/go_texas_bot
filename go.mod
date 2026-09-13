@@ -4,15 +4,17 @@ go 1.26.0
 
 require (
 	github.com/disgoorg/disgo v0.19.6
+	github.com/disgoorg/disgolink/v3 v3.1.0
+	github.com/disgoorg/snowflake/v2 v2.0.3
 	github.com/glebarez/sqlite v1.11.0
 	gorm.io/gorm v1.31.2
 )
 
 require (
 	github.com/disgoorg/godave v0.3.0 // indirect
+	github.com/disgoorg/json v1.2.0 // indirect
 	github.com/disgoorg/json/v2 v2.0.0 // indirect
 	github.com/disgoorg/omit v1.0.0 // indirect
-	github.com/disgoorg/snowflake/v2 v2.0.3 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/glebarez/go-sqlite v1.21.2 // indirect
 	github.com/google/uuid v1.3.0 // indirect
