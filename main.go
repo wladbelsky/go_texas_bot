@@ -10,9 +10,11 @@ import (
 	"github.com/disgoorg/disgo/gateway"
 	"go_texas_bot/command"
 	musiccommands "go_texas_bot/command/commands/music"
+	"go_texas_bot/command/commands/welcome"
 	"go_texas_bot/config"
 	"go_texas_bot/db"
 	"go_texas_bot/music"
+	"go_texas_bot/registry"
 	"log"
 	"log/slog"
 	"os"
@@ -55,6 +57,8 @@ func main() {
 		bot.WithEventListenerFunc(musiccommands.ComponentListener),
 		bot.WithEventListenerFunc(onVoiceStateUpdate),
 		bot.WithEventListenerFunc(onVoiceServerUpdate),
+		bot.WithEventListenerFunc(welcome.OnMemberJoin),
+		bot.WithEventListenerFunc(welcome.OnMemberLeave),
 	)
 	if err != nil {
 		log.Panicln("error creating client:", err)
@@ -64,7 +68,7 @@ func main() {
 		slog.Error("error connecting to lavalink node, music commands will be unavailable", "err", err)
 	}
 
-	if _, err = client.Rest.SetGlobalCommands(client.ApplicationID, command.Commands); err != nil {
+	if _, err = client.Rest.SetGlobalCommands(client.ApplicationID, registry.Commands); err != nil {
 		log.Panicln("error setting global commands:", err)
 	}
 	defer client.Close(mainContext)

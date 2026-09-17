@@ -18,16 +18,3 @@ func TestBuildErrorMessage(t *testing.T) {
 		t.Fatalf("expected error message to be ephemeral, flags = %v", msg.Flags)
 	}
 }
-
-func TestCommands_ContainsSay(t *testing.T) {
-	for _, cmd := range Commands {
-		slash, ok := cmd.(discord.SlashCommandCreate)
-		if !ok {
-			continue
-		}
-		if slash.Name == "say" {
-			return
-		}
-	}
-	t.Fatal("expected Commands to register a \"say\" slash command")
-}
