@@ -11,22 +11,23 @@ import (
 	"github.com/disgoorg/disgo/events"
 	"go_texas_bot/arknights"
 	"go_texas_bot/command/command_selector"
+	"go_texas_bot/guildsettings"
 )
 
 func init() {
-	command_selector.CommandSelector.AddCommand("ark", arkCommandListener)
-	command_selector.CommandSelector.AddCommand("myark", myArkCommandListener)
-	command_selector.CommandSelector.AddCommand("barter", barterCommandListener)
+	command_selector.CommandSelector.AddCommand(command_selector.Key("ark", discord.ApplicationCommandTypeSlash), arkCommandListener)
+	command_selector.CommandSelector.AddCommand(command_selector.Key("myark", discord.ApplicationCommandTypeSlash), myArkCommandListener)
+	command_selector.CommandSelector.AddCommand(command_selector.Key("barter", discord.ApplicationCommandTypeSlash), barterCommandListener)
 }
 
 func arkCommandListener(event *events.ApplicationCommandInteractionCreate) error {
-	guildID, err := requireGuildNSFW(event)
+	guildID, err := guildsettings.RequireGuildNSFW(event)
 	if err != nil {
 		return respondEphemeral(event, err.Error())
 	}
 
 	userID := event.User().ID.String()
-	if remaining := checkCooldown(guildID, userID); remaining > 0 {
+	if remaining := checkCooldown(guildID.String(), userID); remaining > 0 {
 		return respondEphemeral(event, fmt.Sprintf("Не так быстро! Попробуй снова через %s.", remaining.Round(time.Second)))
 	}
 
@@ -41,7 +42,7 @@ func arkCommandListener(event *events.ApplicationCommandInteractionCreate) error
 }
 
 func myArkCommandListener(event *events.ApplicationCommandInteractionCreate) error {
-	if _, err := requireGuildNSFW(event); err != nil {
+	if _, err := guildsettings.RequireGuildNSFW(event); err != nil {
 		return respondEphemeral(event, err.Error())
 	}
 
@@ -99,7 +100,7 @@ func respondMyArkCharacter(event *events.ApplicationCommandInteractionCreate, us
 }
 
 func barterCommandListener(event *events.ApplicationCommandInteractionCreate) error {
-	_, err := requireGuildNSFW(event)
+	_, err := guildsettings.RequireGuildNSFW(event)
 	if err != nil {
 		return respondEphemeral(event, err.Error())
 	}

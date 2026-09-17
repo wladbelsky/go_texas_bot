@@ -50,7 +50,7 @@ func main() {
 				gateway.IntentGuildVoiceStates,
 			),
 		),
-		bot.WithCacheConfigOpts(cache.WithCaches(cache.FlagVoiceStates)),
+		bot.WithCacheConfigOpts(cache.WithCaches(cache.FlagVoiceStates|cache.FlagMembers)),
 		bot.WithEventListenerFunc(command.Listener),
 		bot.WithEventListenerFunc(musiccommands.ComponentListener),
 		bot.WithEventListenerFunc(onVoiceStateUpdate),

@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	command_selector.CommandSelector.AddCommand("say", sayCommandListener)
+	command_selector.CommandSelector.AddCommand(command_selector.Key("say", discord.ApplicationCommandTypeSlash), sayCommandListener)
 }
 
 func sayCommandListener(event *events.ApplicationCommandInteractionCreate) error {

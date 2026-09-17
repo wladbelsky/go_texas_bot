@@ -4,6 +4,7 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"go_texas_bot/command/command_selector"
+	"go_texas_bot/reactions"
 	"log/slog"
 )
 
@@ -158,16 +159,132 @@ var Commands = []discord.ApplicationCommandCreate{
 		Name:        "controls",
 		Description: "Показать плеер с кнопками управления",
 	},
+	discord.SlashCommandCreate{
+		Name:        "sfw",
+		Description: "Аниме пикчи)",
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionString{
+				Name:        "type",
+				Description: "Выбери что хочешь посмотреть",
+				Required:    true,
+				Choices:     stringChoices("waifu", "neko", "awoo", "shinobu", "megumin"),
+			},
+		},
+	},
+	discord.SlashCommandCreate{
+		Name:        "reaction",
+		Description: "Аниме реакшоны",
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionString{
+				Name:        "type",
+				Description: "Выбери эмоцию",
+				Required:    true,
+				Choices:     stringChoices(reactions.Categories...),
+			},
+			discord.ApplicationCommandOptionUser{
+				Name:        "member",
+				Description: "Выбери кого упомянуть (для парных эмоций)",
+			},
+		},
+	},
+	discord.SlashCommandCreate{
+		Name:        "nsfw",
+		Description: "Пошлые аниме пикчи))",
+		NSFW:        boolPtr(true),
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionString{
+				Name:        "type",
+				Description: "Выбери что хочешь посмотреть",
+				Choices:     stringChoices("waifu", "neko", "trap", "blowjob"),
+			},
+		},
+	},
+	discord.SlashCommandCreate{
+		Name:        "ger",
+		Description: "Пукает в рандома, или в себя)",
+		NSFW:        boolPtr(true),
+	},
+	discord.SlashCommandCreate{
+		Name:        "ping",
+		Description: "Замеряет задержку в развитии, твоем)",
+	},
+	discord.SlashCommandCreate{
+		Name:        "announce",
+		Description: "Я скажу все что ты хочешь, братик (только для администраторов)",
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionString{
+				Name:        "message",
+				Description: "Сообщение",
+				Required:    true,
+			},
+			discord.ApplicationCommandOptionChannel{
+				Name:         "channel",
+				Description:  "В какой канал отправить",
+				Required:     true,
+				ChannelTypes: []discord.ChannelType{discord.ChannelTypeGuildText},
+			},
+		},
+	},
+	discord.SlashCommandCreate{
+		Name:        "info",
+		Description: "Информация и статистика бота",
+	},
+	discord.SlashCommandCreate{
+		Name:        "invite",
+		Description: "Показать ссылку-приглашение этого бота",
+	},
+	discord.SlashCommandCreate{
+		Name:        "f",
+		Description: "Отдать честь за почивших героев. Можно упоминанием указать кого чтим.",
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionUser{
+				Name:        "member",
+				Description: "Кого почтить",
+			},
+		},
+	},
+	discord.UserCommandCreate{Name: "f"},
+	discord.SlashCommandCreate{
+		Name:        "o7",
+		Description: "Поприветствовать командиров, а можно и кого-то конкретного",
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionUser{
+				Name:        "member",
+				Description: "Кого поприветствовать",
+			},
+		},
+	},
+	discord.UserCommandCreate{Name: "o7"},
+	discord.SlashCommandCreate{
+		Name:        "avatar",
+		Description: "Показать аватарку участника",
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionUser{
+				Name:        "member",
+				Description: "Чью аватарку показать",
+				Required:    true,
+			},
+		},
+	},
+	discord.UserCommandCreate{Name: "avatar"},
 }
 
 func boolPtr(v bool) *bool { return &v }
 func intPtr(v int) *int    { return &v }
 
+func stringChoices(values ...string) []discord.ApplicationCommandOptionChoiceString {
+	choices := make([]discord.ApplicationCommandOptionChoiceString, len(values))
+	for i, v := range values {
+		choices[i] = discord.ApplicationCommandOptionChoiceString{Name: v, Value: v}
+	}
+	return choices
+}
+
 func Listener(event *events.ApplicationCommandInteractionCreate) {
-	data := event.SlashCommandInteractionData()
-	command, ok := command_selector.CommandSelector.GetCommand(data.CommandName())
+	key := command_selector.Key(event.Data.CommandName(), event.Data.Type())
+	command, ok := command_selector.CommandSelector.GetCommand(key)
 	if !ok {
-		slog.Error("command not found")
+		slog.Error("command not found", "key", key)
 		return
 	}
 	err := command(event)

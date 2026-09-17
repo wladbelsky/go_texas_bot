@@ -20,3 +20,20 @@ type GuildSettings struct {
 	NSFWEnabled           bool
 	ToxicGreetingsEnabled bool
 }
+
+// GerStats is a singleton row of global /ger counters (ID is always 1).
+type GerStats struct {
+	ID    uint `gorm:"primaryKey"`
+	Total int  // every /ger call, including self-directed ones
+	Self  int  // calls that landed on the caller themselves
+	Bot   int  // calls whose target was a bot
+	Me    int  // calls whose target was this bot
+}
+
+// UserGerCounter tracks each user's /ger involvement: how many times they
+// called it (Uses) and how many times they were the target (Hits).
+type UserGerCounter struct {
+	UserID string `gorm:"primaryKey"`
+	Uses   int
+	Hits   int
+}

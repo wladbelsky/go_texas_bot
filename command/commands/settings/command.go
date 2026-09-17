@@ -8,10 +8,11 @@ import (
 	"github.com/disgoorg/disgo/events"
 	"go_texas_bot/command/command_selector"
 	"go_texas_bot/db"
+	"go_texas_bot/guildsettings"
 )
 
 func init() {
-	command_selector.CommandSelector.AddCommand("settings", settingsCommandListener)
+	command_selector.CommandSelector.AddCommand(command_selector.Key("settings", discord.ApplicationCommandTypeSlash), settingsCommandListener)
 }
 
 func settingsCommandListener(event *events.ApplicationCommandInteractionCreate) error {
@@ -31,12 +32,12 @@ func settingsCommandListener(event *events.ApplicationCommandInteractionCreate) 
 		return respond(event, "Ничего не изменилось.")
 	}
 
-	var current db.GuildSettings
-	if err := db.DB.FirstOrCreate(&current, db.GuildSettings{GuildID: guildID.String()}).Error; err != nil {
+	current, err := guildsettings.Get(guildID.String())
+	if err != nil {
 		return err
 	}
 	current.NSFWEnabled = nsfwEnabled
-	if err := db.DB.Save(&current).Error; err != nil {
+	if err = db.DB.Save(&current).Error; err != nil {
 		return err
 	}
 

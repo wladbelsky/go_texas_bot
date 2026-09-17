@@ -19,16 +19,19 @@ import (
 )
 
 func init() {
-	command_selector.CommandSelector.AddCommand("play", playCommandListener)
-	command_selector.CommandSelector.AddCommand("skip", skipCommandListener)
-	command_selector.CommandSelector.AddCommand("stop", stopCommandListener)
-	command_selector.CommandSelector.AddCommand("queue", queueCommandListener)
-	command_selector.CommandSelector.AddCommand("disconnect", disconnectCommandListener)
-	command_selector.CommandSelector.AddCommand("shuffle", shuffleCommandListener)
-	command_selector.CommandSelector.AddCommand("repeat", repeatCommandListener)
-	command_selector.CommandSelector.AddCommand("skipto", skiptoCommandListener)
-	command_selector.CommandSelector.AddCommand("pop", popCommandListener)
-	command_selector.CommandSelector.AddCommand("controls", controlsCommandListener)
+	add := func(name string, fn command_selector.CommandFunc) {
+		command_selector.CommandSelector.AddCommand(command_selector.Key(name, discord.ApplicationCommandTypeSlash), fn)
+	}
+	add("play", playCommandListener)
+	add("skip", skipCommandListener)
+	add("stop", stopCommandListener)
+	add("queue", queueCommandListener)
+	add("disconnect", disconnectCommandListener)
+	add("shuffle", shuffleCommandListener)
+	add("repeat", repeatCommandListener)
+	add("skipto", skiptoCommandListener)
+	add("pop", popCommandListener)
+	add("controls", controlsCommandListener)
 }
 
 func respond(event *events.ApplicationCommandInteractionCreate, content string) error {
