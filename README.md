@@ -73,8 +73,11 @@ Running `/settings` without options shows the current values.
 - A Discord application with a bot token. Enable the **Server Members**
   privileged intent in the Developer Portal (the bot needs it for
   `/ger`, the welcome/leave messages and the member cache).
-- [Lavalink v4](https://lavalink.dev) for music. The bot still starts
-  without it; only the music commands fail.
+- [Lavalink v4](https://lavalink.dev) for music. The bot doesn't wait
+  for it: it keeps retrying the connection in the background (backing off
+  up to 30s), and music commands say the music server is unavailable
+  until Lavalink is up. If Lavalink restarts later, the bot reconnects on
+  its own.
 - Go 1.26+ to build from source, or Docker to use the prebuilt image.
 
 ## Configuration
@@ -121,6 +124,12 @@ Both services have resource limits (`deploy.resources.limits`):
 | `texas` | 0.5 | 256M | `GOMEMLIMIT=200MiB` makes the Go GC stay under the limit. |
 
 If you raise the Lavalink heap for a bigger bot, raise its memory limit with it.
+
+Lavalink has a healthcheck (`curl` against its `/version` endpoint), and
+the bot starts only once Lavalink is healthy. If Lavalink never becomes
+healthy (for example, a plugin fails to download), `docker compose up`
+reports the dependency failure and the bot container isn't started. Check
+`docker compose logs lavalink`.
 
 ### From source
 

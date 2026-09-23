@@ -16,6 +16,15 @@ services:
     volumes:
       - ./application.yml:/opt/Lavalink/application.yml
       - ./plugins/:/opt/Lavalink/plugins/
+    # Healthy once the REST API answers, i.e. plugins are loaded and the
+    # server is accepting connections. $$ keeps the password from being
+    # interpolated by compose so the container's own env var is used.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null -H \"Authorization: $$LAVALINK_SERVER_PASSWORD\" http://localhost:2333/version"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -34,6 +43,12 @@ services:
     image: ghcr.io/wladbelsky/go_texas_bot/texas_bot:main
     container_name: texas
     restart: unless-stopped
+    # Start the bot once Lavalink is ready. The bot also retries the Lavalink
+    # connection on its own, so this only avoids a burst of retry errors at
+    # startup; it isn't required for music to work.
+    depends_on:
+      lavalink:
+        condition: service_healthy
     environment:
       - LAVALINK_HOST=lavalink
       - LAVALINK_PORT=2333

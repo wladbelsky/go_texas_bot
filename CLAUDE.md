@@ -17,11 +17,11 @@ CI (`.github/workflows/build.yml`) runs `go test ./...` and then builds the amd6
 
 | Path | What lives there |
 |---|---|
-| `main.go` | Wires everything: `db.Init`, the disgo client (intents, member + voice-state cache), event listeners, `music.Init`, global command registration from `registry.Commands`. |
+| `main.go` | Wires everything: `db.Init`, the disgo client (intents, member + voice-state cache), event listeners, `music.Connect` (in a background goroutine), global command registration from `registry.Commands`. |
 | `config/` | Flag/env lookup (`BOT_TOKEN`, `LAVALINK_*`, `DB_PATH`). An env var overrides its flag. |
 | `db/` | `db.DB` global, models, `AutoMigrate`. |
 | `arknights/` | Embedded operator and skin data, gacha rarity roll with soft pity, collection and barter logic. |
-| `music/` | Per-guild `Queue` (history, repeat modes, requester stored in `Track.UserData`), the disgolink client and track-end auto-advance. |
+| `music/` | Per-guild `Queue` (history, repeat modes, requester stored in `Track.UserData`), the disgolink client and track-end auto-advance. Get the client with `music.Client()`: it is nil until Lavalink connects, so always nil-check it and treat nil as "music unavailable". |
 | `reactions/` | waifu.pics client and the `/reaction` phrase table. |
 | `guildsettings/` | Per-guild opt-in flags; `RequireGuildNSFW` guard. |
 | `registry/` | `Commands`: every slash/user command definition sent to Discord. |
