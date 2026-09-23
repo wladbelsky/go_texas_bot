@@ -1,6 +1,7 @@
 package music
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/disgoorg/disgolink/v3/lavalink"
@@ -199,6 +200,20 @@ func TestWithRequesterAndRequester_RoundTrip(t *testing.T) {
 	got, ok := Requester(withRequester)
 	if !ok || got != userID.String() {
 		t.Fatalf("Requester() = (%q, %v), want (%q, true)", got, ok, userID.String())
+	}
+}
+
+// Lavalink v4 rejects a track update whose userData isn't a JSON object
+// (400 Bad Request), so the stored requester must be wrapped in one.
+func TestWithRequester_UserDataIsJSONObject(t *testing.T) {
+	withRequester := WithRequester(track("a"), snowflake.ID(123456789))
+
+	var obj map[string]any
+	if err := json.Unmarshal(withRequester.UserData, &obj); err != nil {
+		t.Fatalf("UserData = %s, want a JSON object: %v", withRequester.UserData, err)
+	}
+	if obj["requester"] != "123456789" {
+		t.Fatalf("UserData = %s, want requester 123456789", withRequester.UserData)
 	}
 }
 

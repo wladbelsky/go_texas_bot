@@ -22,15 +22,22 @@ const (
 	RepeatAll  RepeatMode = "all"
 )
 
+// trackUserData is what WithRequester stores in a track's UserData.
+// Lavalink v4 only accepts a JSON object there: a bare JSON string is
+// rejected with 400 Bad Request when the track is sent to a player.
+type trackUserData struct {
+	Requester string `json:"requester"`
+}
+
 // WithRequester returns a copy of track with the requesting user's ID
 // attached, so ownership (who's allowed to skip/stop it) survives in
 // Lavalink's own track data instead of a side map that could drift out of
 // sync with the queue.
 func WithRequester(track lavalink.Track, requesterID snowflake.ID) lavalink.Track {
-	withData, err := track.WithUserData(requesterID.String())
+	withData, err := track.WithUserData(trackUserData{Requester: requesterID.String()})
 	if err != nil {
-		// Marshaling a string can't realistically fail; fall back to the
-		// track without requester data rather than dropping it entirely.
+		// Marshaling a one-field struct can't realistically fail; fall back
+		// to the track without requester data rather than dropping it.
 		return track
 	}
 	return withData
@@ -41,11 +48,11 @@ func Requester(track lavalink.Track) (string, bool) {
 	if len(track.UserData) == 0 {
 		return "", false
 	}
-	var requesterID string
-	if err := json.Unmarshal(track.UserData, &requesterID); err != nil {
+	var data trackUserData
+	if err := json.Unmarshal(track.UserData, &data); err != nil {
 		return "", false
 	}
-	return requesterID, requesterID != ""
+	return data.Requester, data.Requester != ""
 }
 
 // Queue is a per-guild playback queue. It keeps the full track history (like

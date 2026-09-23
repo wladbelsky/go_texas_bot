@@ -8,7 +8,7 @@ lavalink:
   plugins:
     # YouTube playback. Lavalink's own built-in YouTube source is
     # deprecated; this is the actively maintained replacement.
-    - dependency: "dev.lavalink.youtube:youtube-plugin:1.13.5"
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.18.2"
       repository: "https://maven.lavalink.dev/releases"
     # Resolves Spotify/Apple Music/Deezer/Yandex Music links and searches
     # by playing the matching track from a "direct" source (YouTube by
