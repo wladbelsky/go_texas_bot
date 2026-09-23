@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
@@ -64,9 +65,21 @@ func main() {
 		log.Panicln("error creating client:", err)
 	}
 
-	if err = music.Init(mainContext, client.ApplicationID, config.LavalinkHost(), config.LavalinkPort(), config.LavalinkPassword()); err != nil {
-		slog.Error("error connecting to lavalink node, music commands will be unavailable", "err", err)
-	}
+	// Connect to Lavalink in the background: disgolink keeps retrying until the
+	// node is up, and music commands report it as unavailable until then, so
+	// a slow or missing Lavalink never blocks the rest of the bot.
+	lavalinkCtx, stopLavalink := context.WithCancel(mainContext)
+	defer stopLavalink()
+	go func() {
+		slog.Info("connecting to lavalink", "host", config.LavalinkHost(), "port", config.LavalinkPort())
+		if err := music.Connect(lavalinkCtx, client.ApplicationID, config.LavalinkHost(), config.LavalinkPort(), config.LavalinkPassword()); err != nil {
+			if !errors.Is(err, context.Canceled) {
+				slog.Error("gave up connecting to lavalink, music commands will be unavailable", "err", err)
+			}
+			return
+		}
+		slog.Info("connected to lavalink")
+	}()
 
 	if _, err = client.Rest.SetGlobalCommands(client.ApplicationID, registry.Commands); err != nil {
 		log.Panicln("error setting global commands:", err)
@@ -86,10 +99,11 @@ func main() {
 // disgolink, which needs them to keep its players' voice connections in
 // sync, and drops the guild's music queue once the bot leaves the channel.
 func onVoiceStateUpdate(event *events.GuildVoiceStateUpdate) {
-	if music.Lavalink == nil || event.VoiceState.UserID != event.Client().ApplicationID {
+	lavalinkClient := music.Client()
+	if lavalinkClient == nil || event.VoiceState.UserID != event.Client().ApplicationID {
 		return
 	}
-	music.Lavalink.OnVoiceStateUpdate(context.Background(), event.VoiceState.GuildID, event.VoiceState.ChannelID, event.VoiceState.SessionID)
+	lavalinkClient.OnVoiceStateUpdate(context.Background(), event.VoiceState.GuildID, event.VoiceState.ChannelID, event.VoiceState.SessionID)
 	if event.VoiceState.ChannelID == nil {
 		music.Queues.Delete(event.VoiceState.GuildID)
 	}
@@ -97,8 +111,9 @@ func onVoiceStateUpdate(event *events.GuildVoiceStateUpdate) {
 
 // onVoiceServerUpdate forwards voice server updates to disgolink.
 func onVoiceServerUpdate(event *events.VoiceServerUpdate) {
-	if music.Lavalink == nil || event.Endpoint == nil {
+	lavalinkClient := music.Client()
+	if lavalinkClient == nil || event.Endpoint == nil {
 		return
 	}
-	music.Lavalink.OnVoiceServerUpdate(context.Background(), event.GuildID, event.Token, *event.Endpoint)
+	lavalinkClient.OnVoiceServerUpdate(context.Background(), event.GuildID, event.Token, *event.Endpoint)
 }

@@ -51,11 +51,12 @@ func playCommandListener(event *events.ApplicationCommandInteractionCreate) erro
 	if err != nil {
 		return respondEphemeral(event, err.Error())
 	}
-	if musicpkg.Lavalink == nil {
+	lavalinkClient := musicpkg.Client()
+	if lavalinkClient == nil {
 		return respondEphemeral(event, errLavalinkDown.Error())
 	}
-	node := musicpkg.Lavalink.BestNode()
-	if node == nil {
+	node := lavalinkClient.BestNode()
+	if node == nil || node.Status() != disgolink.StatusConnected {
 		return respondEphemeral(event, errLavalinkDown.Error())
 	}
 
@@ -126,7 +127,7 @@ func playCommandListener(event *events.ApplicationCommandInteractionCreate) erro
 		queue.Add(*toPlay)
 	}
 
-	player := musicpkg.Lavalink.Player(guildID)
+	player := lavalinkClient.Player(guildID)
 	alreadyPlaying := player.Track() != nil
 
 	if err = event.Client().UpdateVoiceState(context.Background(), guildID, voiceState.ChannelID, false, false); err != nil {

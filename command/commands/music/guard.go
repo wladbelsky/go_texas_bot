@@ -40,10 +40,11 @@ func requireGuild(event *events.ApplicationCommandInteractionCreate) (snowflake.
 // existingPlayer returns the guild's player if one is already connected, or
 // nil if there isn't one (or Lavalink itself is unreachable).
 func existingPlayer(guildID snowflake.ID) disgolink.Player {
-	if music.Lavalink == nil {
+	lavalinkClient := music.Client()
+	if lavalinkClient == nil {
 		return nil
 	}
-	return music.Lavalink.ExistingPlayer(guildID)
+	return lavalinkClient.ExistingPlayer(guildID)
 }
 
 // requireTrackOwnerOrAdmin mirrors the original bot's permission check for
