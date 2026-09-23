@@ -232,3 +232,50 @@ func TestManager_Delete(t *testing.T) {
 		t.Fatal("expected a fresh, empty queue after Delete()")
 	}
 }
+
+func TestQueue_AdvanceAfterExhaustionPlaysNewlyAddedTrack(t *testing.T) {
+	q := NewQueue()
+	q.Add(track("a"))
+	q.Advance() // a plays
+	if _, ok := q.Advance(); ok {
+		t.Fatal("expected the queue to be exhausted after the only track")
+	}
+
+	q.Add(track("b"))
+	next, ok := q.Advance()
+	if !ok || next.Info.Title != "b" {
+		t.Fatalf("Advance() after exhaustion + Add = (%q, %v), want (\"b\", true)", next.Info.Title, ok)
+	}
+}
+
+func TestQueue_PreviousAfterExhaustionReturnsEarlierTrack(t *testing.T) {
+	q := NewQueue()
+	q.Add(track("a"), track("b"))
+	q.Advance() // a
+	q.Advance() // b
+	q.Advance() // exhausted
+
+	prev, ok := q.Previous()
+	if !ok || prev.Info.Title != "a" {
+		t.Fatalf("Previous() after exhaustion = (%q, %v), want (\"a\", true)", prev.Info.Title, ok)
+	}
+}
+
+func TestQueue_At(t *testing.T) {
+	q := NewQueue()
+	q.Add(track("a"), track("b"))
+
+	got, ok := q.At(1)
+	if !ok || got.Info.Title != "b" {
+		t.Fatalf("At(1) = (%q, %v), want (\"b\", true)", got.Info.Title, ok)
+	}
+	if q.Position() != -1 {
+		t.Fatalf("At() moved the position to %d, want it untouched at -1", q.Position())
+	}
+	if _, ok := q.At(2); ok {
+		t.Fatal("expected At() with an out-of-range index to fail")
+	}
+	if _, ok := q.At(-1); ok {
+		t.Fatal("expected At() with a negative index to fail")
+	}
+}

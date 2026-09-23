@@ -54,6 +54,10 @@ func playCommandListener(event *events.ApplicationCommandInteractionCreate) erro
 	if musicpkg.Lavalink == nil {
 		return respondEphemeral(event, errLavalinkDown.Error())
 	}
+	node := musicpkg.Lavalink.BestNode()
+	if node == nil {
+		return respondEphemeral(event, errLavalinkDown.Error())
+	}
 
 	voiceState, ok := event.Client().Caches.VoiceState(guildID, event.User().ID)
 	if !ok || voiceState.ChannelID == nil {
@@ -79,7 +83,7 @@ func playCommandListener(event *events.ApplicationCommandInteractionCreate) erro
 	var toPlay *lavalink.Track
 	var alreadyQueued bool
 	var loadedMessage string
-	musicpkg.Lavalink.BestNode().LoadTracksHandler(ctx, identifier, disgolink.NewResultHandler(
+	node.LoadTracksHandler(ctx, identifier, disgolink.NewResultHandler(
 		func(t lavalink.Track) {
 			t = musicpkg.WithRequester(t, requesterID)
 			toPlay = &t
@@ -267,7 +271,7 @@ func skiptoCommandListener(event *events.ApplicationCommandInteractionCreate) er
 	if err = player.Update(context.Background(), lavalink.WithTrack(track)); err != nil {
 		return err
 	}
-	return respond(event, "Играем музяку под номером "+event.SlashCommandInteractionData().String("index"))
+	return respond(event, fmt.Sprintf("Играем музяку под номером %d", index+1))
 }
 
 func popCommandListener(event *events.ApplicationCommandInteractionCreate) error {
@@ -276,7 +280,13 @@ func popCommandListener(event *events.ApplicationCommandInteractionCreate) error
 		return respondEphemeral(event, err.Error())
 	}
 	index := event.SlashCommandInteractionData().Int("index") - 1
-	track, ok := musicpkg.Queues.Get(guildID).RemoveAt(index)
+	queue := musicpkg.Queues.Get(guildID)
+	if target, ok := queue.At(index); ok {
+		if err = requireTrackOwnerOrAdmin(event.Member(), event.User().ID, target); err != nil {
+			return respondEphemeral(event, err.Error())
+		}
+	}
+	track, ok := queue.RemoveAt(index)
 	if !ok {
 		return respondEphemeral(event, "Указан неверный номер (или это трек, который играет сейчас)")
 	}

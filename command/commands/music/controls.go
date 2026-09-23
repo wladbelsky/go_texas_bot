@@ -30,7 +30,10 @@ func controlsCommandListener(event *events.ApplicationCommandInteractionCreate) 
 // command.Listener) since button presses arrive as a different interaction
 // type than slash commands.
 func ComponentListener(event *events.ComponentInteractionCreate) {
-	customID := event.ButtonInteractionData().CustomID()
+	if event.Data.Type() != discord.ComponentTypeButton {
+		return
+	}
+	customID := event.Data.CustomID()
 	guildID := event.GuildID()
 	if guildID == nil {
 		return
@@ -44,7 +47,7 @@ func ComponentListener(event *events.ComponentInteractionCreate) {
 	case customIDPrev:
 		actionErr = handlePrev(event, player, queue)
 	case customIDPause:
-		actionErr = handlePause(player)
+		actionErr = handlePause(event, player)
 	case customIDStop:
 		actionErr = handleStop(event, player, queue)
 	case customIDNext:
@@ -83,9 +86,12 @@ func handlePrev(event *events.ComponentInteractionCreate, player disgolink.Playe
 	return player.Update(context.Background(), lavalink.WithTrack(prev))
 }
 
-func handlePause(player disgolink.Player) error {
-	if player == nil {
+func handlePause(event *events.ComponentInteractionCreate, player disgolink.Player) error {
+	if player == nil || player.Track() == nil {
 		return errNothingPlaying
+	}
+	if err := requireTrackOwnerOrAdmin(event.Member(), event.User().ID, *player.Track()); err != nil {
+		return err
 	}
 	return player.Update(context.Background(), lavalink.WithPaused(!player.Paused()))
 }

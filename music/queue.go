@@ -194,7 +194,10 @@ func (q *Queue) Advance() (track lavalink.Track, ok bool) {
 		if q.repeatMode == RepeatAll {
 			q.position = 0
 		} else {
-			q.position = len(q.tracks)
+			// Stay on the last played track rather than parking past the end:
+			// tracks appended later land at position+1 and get picked up by
+			// the next Advance, and Previous still steps back correctly.
+			q.position--
 			return lavalink.Track{}, false
 		}
 	}
@@ -212,6 +215,17 @@ func (q *Queue) Previous() (lavalink.Track, bool) {
 	}
 	q.position--
 	return q.currentLocked()
+}
+
+// At returns the track at the given 0-based index without moving the
+// position.
+func (q *Queue) At(index int) (lavalink.Track, bool) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if index < 0 || index >= len(q.tracks) {
+		return lavalink.Track{}, false
+	}
+	return q.tracks[index], true
 }
 
 // SkipTo jumps directly to the 0-based index and returns that track.
