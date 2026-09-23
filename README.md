@@ -116,6 +116,15 @@ docker compose up -d
 
 The SQLite database is stored in `./data`.
 
+`docker-compose.yml` needs Compose v2 (the `docker compose` plugin). The old
+Python `docker-compose` v1 (e.g. 1.25 from the Ubuntu 20.04 repos) rejects it
+with `Unsupported config option for services: ...`. For v1, use the
+equivalent legacy file (format 2.4, same services, limits and healthcheck):
+
+```sh
+docker-compose -f docker-compose.old.yml up -d
+```
+
 Both services have resource limits (`deploy.resources.limits`):
 
 | Service | CPUs | Memory | Notes |

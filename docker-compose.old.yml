@@ -1,0 +1,82 @@
+# Legacy variant of docker-compose.yml for the old Python docker-compose
+# (v1, e.g. 1.25 from the Ubuntu 20.04 apt repo), which can't read the
+# versionless Compose Spec file. Run it with:
+#
+#   docker-compose -f docker-compose.old.yml up -d
+#
+# It uses file format 2.4, the last 2.x format and the one that still has
+# per-container resource limits (cpus / mem_limit) and
+# depends_on "condition: service_healthy". In 3.x, limits moved to
+# deploy.resources (ignored by docker-compose v1 without --compatibility)
+# and depends_on conditions were removed.
+#
+# Keep it in sync with docker-compose.yml. If you can, install Compose v2
+# (the "docker compose" plugin) and use docker-compose.yml instead.
+version: "2.4"
+
+services:
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4
+    container_name: lavalink
+    restart: unless-stopped
+    environment:
+      # Keep the heap below mem_limit, leaving headroom for the JVM's
+      # off-heap memory (threads, buffers, metaspace).
+      - _JAVA_OPTIONS=-Xmx1G
+      - SERVER_PORT=2333
+      - LAVALINK_SERVER_PASSWORD=youshallnotpass
+      # Required for Spotify link/search support (LavaSrc plugin, see application.yml).
+      # Create an app at https://developer.spotify.com/dashboard to get these.
+      - SPOTIFY_CLIENT_ID=yourspotifyclientid
+      - SPOTIFY_CLIENT_SECRET=yourspotifyclientsecret
+    volumes:
+      - ./application.yml:/opt/Lavalink/application.yml
+      - ./plugins/:/opt/Lavalink/plugins/
+    # Healthy once the REST API answers, i.e. plugins are loaded and the
+    # server is accepting connections. $$ keeps the password from being
+    # interpolated by compose so the container's own env var is used.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null -H \"Authorization: $$LAVALINK_SERVER_PASSWORD\" http://localhost:2333/version"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    cpus: 2
+    mem_limit: 1536m
+    networks:
+      - lavalink
+    expose:
+      # lavalink exposes port 2333 to connect to for other containers (this is for documentation purposes only)
+      - 2333
+    ports:
+      # you only need this if you want to make your lavalink accessible from outside of containers
+      - "2333:2333"
+  texas:
+    # Built and pushed by CI (.github/workflows/build.yml) on every push to main.
+    image: ghcr.io/wladbelsky/go_texas_bot/texas_bot:main
+    container_name: texas
+    restart: unless-stopped
+    # Start the bot once Lavalink is ready. The bot also retries the Lavalink
+    # connection on its own, so this only avoids a burst of retry errors at
+    # startup; it isn't required for music to work.
+    depends_on:
+      lavalink:
+        condition: service_healthy
+    environment:
+      - LAVALINK_HOST=lavalink
+      - LAVALINK_PORT=2333
+      - LAVALINK_PASSWORD=youshallnotpass
+      - BOT_TOKEN=yourbottoken
+      - DB_PATH=/app/data/texas_bot.db
+      # Soft limit for the Go GC, kept below mem_limit.
+      - GOMEMLIMIT=200MiB
+    cpus: 0.5
+    mem_limit: 256m
+    networks:
+      - lavalink
+    volumes:
+      - ./data:/app/data
+
+networks:
+  lavalink:
+    name: lavalink
