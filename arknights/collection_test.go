@@ -167,3 +167,33 @@ func TestBarter_NoDuplicatesToExchange(t *testing.T) {
 		t.Fatalf("Barter() = %v, want no exchanges for a user with no duplicates", results)
 	}
 }
+
+func TestTotalGranted_OnlyGrowsThroughBarter(t *testing.T) {
+	openTestDB(t)
+
+	fourStar, _ := RandomOfRarity(4)
+	for i := 0; i < 6; i++ {
+		if err := addToCollection("user-1", fourStar); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before, err := TotalGranted()
+	if err != nil {
+		t.Fatalf("TotalGranted() failed: %v", err)
+	}
+	if before != 6 {
+		t.Fatalf("TotalGranted() = %d, want 6", before)
+	}
+
+	granted, err := Barter("user-1")
+	if err != nil {
+		t.Fatalf("Barter() failed: %v", err)
+	}
+	after, err := TotalGranted()
+	if err != nil {
+		t.Fatalf("TotalGranted() failed: %v", err)
+	}
+	if after != before+len(granted) {
+		t.Fatalf("TotalGranted() after barter = %d, want %d (+%d exchanged, duplicates given up don't count down)", after, before+len(granted), len(granted))
+	}
+}

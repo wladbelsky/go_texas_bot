@@ -85,6 +85,10 @@ var Commands = []discord.ApplicationCommandCreate{
 				Name:        "nsfw-content",
 				Description: "Включить NSFW-контент (симулятор кейсов Arknights и т.п.) на этом сервере",
 			},
+			discord.ApplicationCommandOptionBool{
+				Name:        "toxic-greetings",
+				Description: "Писать в канал «основной», когда участник выходит с сервера",
+			},
 		},
 	},
 	discord.SlashCommandCreate{

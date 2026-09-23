@@ -27,12 +27,13 @@ func arkCommandListener(event *events.ApplicationCommandInteractionCreate) error
 	}
 
 	userID := event.User().ID.String()
-	if remaining := checkCooldown(guildID.String(), userID); remaining > 0 {
+	if remaining := rollCooldown.Reserve(guildID.String(), userID); remaining > 0 {
 		return respondEphemeral(event, fmt.Sprintf("Не так быстро! Попробуй снова через %s.", remaining.Round(time.Second)))
 	}
 
 	character, err := arknights.Roll(userID)
 	if err != nil {
+		rollCooldown.Release(guildID.String(), userID)
 		return err
 	}
 

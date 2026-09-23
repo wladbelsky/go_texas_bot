@@ -56,7 +56,24 @@ func addToCollection(userID string, character Character) error {
 	}
 	entry.Rarity = character.Rarity
 	entry.Count++
-	return db.DB.Save(&entry).Error
+	if err = db.DB.Save(&entry).Error; err != nil {
+		return err
+	}
+
+	var stats db.ArkStats
+	if err = db.DB.FirstOrCreate(&stats, db.ArkStats{ID: 1}).Error; err != nil {
+		return err
+	}
+	stats.TotalGranted++
+	return db.DB.Save(&stats).Error
+}
+
+// TotalGranted returns how many operators have ever been added to any
+// collection (the original bot's Statistic.ARK counter).
+func TotalGranted() (int, error) {
+	var stats db.ArkStats
+	err := db.DB.FirstOrCreate(&stats, db.ArkStats{ID: 1}).Error
+	return stats.TotalGranted, err
 }
 
 // Collection returns the calling user's collected operators grouped by

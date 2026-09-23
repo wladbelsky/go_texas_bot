@@ -21,20 +21,6 @@ func openTestDB(t *testing.T) {
 	})
 }
 
-func TestCheckCooldown_FirstUseHasNoCooldown(t *testing.T) {
-	if remaining := checkCooldown("guild-1", "user-cooldown-first"); remaining != 0 {
-		t.Fatalf("checkCooldown() = %v, want 0 for a first use", remaining)
-	}
-}
-
-func TestCheckCooldown_SecondUseIsBlocked(t *testing.T) {
-	guildID, userID := "guild-1", "user-cooldown-second"
-	checkCooldown(guildID, userID)
-	if remaining := checkCooldown(guildID, userID); remaining <= 0 {
-		t.Fatalf("second checkCooldown() = %v, want a positive remaining duration", remaining)
-	}
-}
-
 func TestPhraseLists_AreNonEmpty(t *testing.T) {
 	if len(phrases) == 0 {
 		t.Error("expected phrases to be non-empty")

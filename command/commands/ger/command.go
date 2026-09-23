@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"sync"
 	"time"
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/snowflake/v2"
 	"go_texas_bot/command/command_selector"
+	"go_texas_bot/command/cooldown"
 	"go_texas_bot/db"
 	"go_texas_bot/guildsettings"
 )
@@ -37,24 +37,9 @@ var selfPhrases = []string{
 	"выдал звучную трель", "громогласно перданул", "жоплодирует!",
 }
 
-// cooldown mirrors the original bot's per-guild-per-user 22h cooldown
-// (config.json ger.ger_cooldown=79200s). Kept in memory like /ark's, for
-// the same "fine to lose on redeploy" reasoning.
-const cooldown = 22 * time.Hour
-
-var lastUse sync.Map // map[string]time.Time, keyed by "guildID:userID"
-
-func checkCooldown(guildID, userID string) time.Duration {
-	key := guildID + ":" + userID
-	now := time.Now()
-	if v, ok := lastUse.Load(key); ok {
-		if remaining := cooldown - now.Sub(v.(time.Time)); remaining > 0 {
-			return remaining
-		}
-	}
-	lastUse.Store(key, now)
-	return 0
-}
+// gerCooldown mirrors the original bot's per-guild-per-user /ger cooldown
+// (config.json ger.ger_cooldown=79200s).
+var gerCooldown = cooldown.New(22 * time.Hour)
 
 var errNoOtherMembers = errors.New("на сервере больше никого нет, не в кого пукать")
 
@@ -65,17 +50,19 @@ func gerCommandListener(event *events.ApplicationCommandInteractionCreate) error
 	}
 
 	authorID := event.User().ID
-	if remaining := checkCooldown(guildID.String(), authorID.String()); remaining > 0 {
+	if remaining := gerCooldown.Reserve(guildID.String(), authorID.String()); remaining > 0 {
 		return respondEphemeral(event, fmt.Sprintf("Не так быстро! Попробуй снова через %s.", remaining.Round(time.Second)))
 	}
 
 	target, ok := randomOtherMember(event, guildID, authorID)
 	if !ok {
+		gerCooldown.Release(guildID.String(), authorID.String())
 		return respondEphemeral(event, errNoOtherMembers.Error())
 	}
 
 	isSelf := rand.Intn(102) < selfChance
 	if err = recordStats(event, authorID, target, isSelf); err != nil {
+		gerCooldown.Release(guildID.String(), authorID.String())
 		return err
 	}
 

@@ -8,6 +8,14 @@ type ArkCollectionEntry struct {
 	Count        int
 }
 
+// ArkStats is a singleton row (ID is always 1) of global /ark counters.
+// TotalGranted only ever grows, unlike summing ArkCollectionEntry.Count,
+// which /barter reduces when it exchanges duplicates away.
+type ArkStats struct {
+	ID           uint `gorm:"primaryKey"`
+	TotalGranted int  // operators ever added to any collection, by roll or barter
+}
+
 // ArkPity tracks the six-star soft-pity counter per user.
 type ArkPity struct {
 	UserID  string `gorm:"primaryKey"`

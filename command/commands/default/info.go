@@ -6,6 +6,7 @@ import (
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
+	"go_texas_bot/arknights"
 	"go_texas_bot/db"
 )
 
@@ -18,7 +19,7 @@ func infoCommandListener(event *events.ApplicationCommandInteractionCreate) erro
 }
 
 func infoEmbed(requestedBy string) (discord.Embed, error) {
-	arkTotal, err := totalArkRolls()
+	arkTotal, err := arknights.TotalGranted()
 	if err != nil {
 		return discord.Embed{}, err
 	}
@@ -65,12 +66,6 @@ func infoEmbed(requestedBy string) (discord.Embed, error) {
 		Image:     &discord.EmbedResource{URL: "https://aceship.github.io/AN-EN-Tags/img/characters/char_102_texas_2.png"},
 		Footer:    &discord.EmbedFooter{Text: "Requested by " + requestedBy},
 	}, nil
-}
-
-func totalArkRolls() (int, error) {
-	var total int
-	err := db.DB.Model(&db.ArkCollectionEntry{}).Select("COALESCE(SUM(count), 0)").Scan(&total).Error
-	return total, err
 }
 
 func topSixStarCollector() (userID string, count int, err error) {

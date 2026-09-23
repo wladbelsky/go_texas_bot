@@ -34,7 +34,7 @@ func OnMemberJoin(event *events.GuildMemberJoin) {
 
 // OnMemberLeave posts a hostile message to the guild's "основной" channel
 // when it leaves, mirroring the original's on_member_remove -- but only if
-// the guild has opted into it via /settings (toxic-greetings-enabled),
+// the guild has opted into it via /settings toxic-greetings,
 // unlike the original which always sent it unconditionally.
 func OnMemberLeave(event *events.GuildMemberLeave) {
 	settings, err := guildsettings.Get(event.GuildID.String())

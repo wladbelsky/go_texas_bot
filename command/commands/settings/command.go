@@ -1,9 +1,10 @@
 // Package settings implements /settings, letting server admins opt into
-// optional/sensitive bot features on a per-guild basis (starting with the
-// Arknights case simulator's NSFW content).
+// optional/sensitive bot features on a per-guild basis.
 package settings
 
 import (
+	"fmt"
+
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"go_texas_bot/command/command_selector"
@@ -15,6 +16,13 @@ func init() {
 	command_selector.CommandSelector.AddCommand(command_selector.Key("settings", discord.ApplicationCommandTypeSlash), settingsCommandListener)
 }
 
+// canManageGuild reports whether the member may change bot settings. It
+// needs two separate Has calls: disgo's Permissions.Has requires *all* the
+// given bits, not any of them.
+func canManageGuild(p discord.Permissions) bool {
+	return p.Has(discord.PermissionManageGuild) || p.Has(discord.PermissionAdministrator)
+}
+
 func settingsCommandListener(event *events.ApplicationCommandInteractionCreate) error {
 	guildID := event.GuildID()
 	if guildID == nil {
@@ -22,30 +30,46 @@ func settingsCommandListener(event *events.ApplicationCommandInteractionCreate) 
 	}
 
 	member := event.Member()
-	if member == nil || !member.Permissions.Has(discord.PermissionManageGuild, discord.PermissionAdministrator) {
+	if member == nil || !canManageGuild(member.Permissions) {
 		return respond(event, "Нужны права на управление сервером.")
-	}
-
-	data := event.SlashCommandInteractionData()
-	nsfwEnabled, hasNSFW := data.OptBool("nsfw-content")
-	if !hasNSFW {
-		return respond(event, "Ничего не изменилось.")
 	}
 
 	current, err := guildsettings.Get(guildID.String())
 	if err != nil {
 		return err
 	}
-	current.NSFWEnabled = nsfwEnabled
-	if err = db.DB.Save(&current).Error; err != nil {
-		return err
+
+	data := event.SlashCommandInteractionData()
+	changed := false
+	if v, ok := data.OptBool("nsfw-content"); ok {
+		current.NSFWEnabled = v
+		changed = true
+	}
+	if v, ok := data.OptBool("toxic-greetings"); ok {
+		current.ToxicGreetingsEnabled = v
+		changed = true
+	}
+	if changed {
+		if err = db.DB.Save(&current).Error; err != nil {
+			return err
+		}
 	}
 
-	status := "выключен"
-	if nsfwEnabled {
-		status = "включён"
+	return respond(event, describe(current))
+}
+
+func describe(s db.GuildSettings) string {
+	return fmt.Sprintf(
+		"Настройки сервера:\n• NSFW-контент (симулятор кейсов Arknights, /nsfw, /ger): %s\n• Сообщение при выходе участника (в канал «основной»): %s",
+		onOff(s.NSFWEnabled), onOff(s.ToxicGreetingsEnabled),
+	)
+}
+
+func onOff(v bool) string {
+	if v {
+		return "включено"
 	}
-	return respond(event, "NSFW-контент (симулятор кейсов Arknights и т.п.) "+status+" для этого сервера.")
+	return "выключено"
 }
 
 func respond(event *events.ApplicationCommandInteractionCreate, content string) error {

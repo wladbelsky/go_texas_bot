@@ -23,7 +23,7 @@ func Init(path string) error {
 		return err
 	}
 
-	if err = database.AutoMigrate(&ArkCollectionEntry{}, &ArkPity{}, &GuildSettings{}, &GerStats{}, &UserGerCounter{}); err != nil {
+	if err = database.AutoMigrate(&ArkCollectionEntry{}, &ArkStats{}, &ArkPity{}, &GuildSettings{}, &GerStats{}, &UserGerCounter{}); err != nil {
 		return err
 	}
 

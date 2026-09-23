@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/disgoorg/snowflake/v2"
+	"go_texas_bot/arknights"
 	"go_texas_bot/db"
 )
 
@@ -53,31 +54,31 @@ func TestFormatGerLeaderboard_SkipsZeroValues(t *testing.T) {
 	}
 }
 
-func TestTotalArkRolls_SumsAcrossUsers(t *testing.T) {
+func TestInfoEmbed_ShowsAllTimeArkCounter(t *testing.T) {
 	openTestDB(t)
 
-	db.DB.Create(&db.ArkCollectionEntry{UserID: "1", OperatorName: "A", Rarity: 5, Count: 3})
-	db.DB.Create(&db.ArkCollectionEntry{UserID: "2", OperatorName: "B", Rarity: 6, Count: 2})
+	for i := 0; i < 3; i++ {
+		if _, err := arknights.Roll("user-1"); err != nil {
+			t.Fatalf("Roll() failed: %v", err)
+		}
+	}
+	// A leftover collection row with a big count must not leak into the
+	// all-time figure: that comes from the monotonic counter, not SUM(count).
+	db.DB.Create(&db.ArkCollectionEntry{UserID: "2", OperatorName: "B", Rarity: 6, Count: 100})
 
-	total, err := totalArkRolls()
+	embed, err := infoEmbed("Someone")
 	if err != nil {
-		t.Fatalf("totalArkRolls() failed: %v", err)
+		t.Fatalf("infoEmbed() failed: %v", err)
 	}
-	if total != 5 {
-		t.Fatalf("totalArkRolls() = %d, want 5", total)
+	for _, f := range embed.Fields {
+		if f.Name == "Статистика арков" {
+			if !strings.HasSuffix(f.Value, ": 3") {
+				t.Fatalf("ark stats field = %q, want the all-time counter (3)", f.Value)
+			}
+			return
+		}
 	}
-}
-
-func TestTotalArkRolls_EmptyDB(t *testing.T) {
-	openTestDB(t)
-
-	total, err := totalArkRolls()
-	if err != nil {
-		t.Fatalf("totalArkRolls() failed: %v", err)
-	}
-	if total != 0 {
-		t.Fatalf("totalArkRolls() = %d, want 0", total)
-	}
+	t.Fatal("expected a \"Статистика арков\" field")
 }
 
 func TestTopSixStarCollector(t *testing.T) {
