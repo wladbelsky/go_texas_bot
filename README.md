@@ -102,15 +102,25 @@ Spotify support, set `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` on the
 ### Docker Compose
 
 [`docker-compose.yml`](docker-compose.yml) runs Lavalink and the bot
-together. Replace the placeholder token, Lavalink password and Spotify
-credentials, point the `texas` service at the image
-`ghcr.io/wladbelsky/go_texas_bot/texas_bot` (built by CI), then run:
+together. The bot uses the image
+[`ghcr.io/wladbelsky/go_texas_bot/texas_bot:main`](https://github.com/wladbelsky/go_texas_bot/pkgs/container/go_texas_bot%2Ftexas_bot),
+which CI builds from `main`. Replace the placeholder token, Lavalink password
+and Spotify credentials, then run:
 
 ```sh
 docker compose up -d
 ```
 
 The SQLite database is stored in `./data`.
+
+Both services have resource limits (`deploy.resources.limits`):
+
+| Service | CPUs | Memory | Notes |
+|---|---|---|---|
+| `lavalink` | 2 | 1536M | JVM heap is `-Xmx1G`. Keep it well below the memory limit, or the container gets OOM-killed. |
+| `texas` | 0.5 | 256M | `GOMEMLIMIT=200MiB` makes the Go GC stay under the limit. |
+
+If you raise the Lavalink heap for a bigger bot, raise its memory limit with it.
 
 ### From source
 

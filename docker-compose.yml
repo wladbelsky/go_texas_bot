@@ -4,7 +4,9 @@ services:
     container_name: lavalink
     restart: unless-stopped
     environment:
-      - _JAVA_OPTIONS=-Xmx4G
+      # Keep the heap below the memory limit in deploy.resources, leaving
+      # headroom for the JVM's off-heap memory (threads, buffers, metaspace).
+      - _JAVA_OPTIONS=-Xmx1G
       - SERVER_PORT=2333
       - LAVALINK_SERVER_PASSWORD=youshallnotpass
       # Required for Spotify link/search support (LavaSrc plugin, see application.yml).
@@ -14,6 +16,11 @@ services:
     volumes:
       - ./application.yml:/opt/Lavalink/application.yml
       - ./plugins/:/opt/Lavalink/plugins/
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1536M
     networks:
       - lavalink
     expose:
@@ -23,8 +30,8 @@ services:
       # you only need this if you want to make your lavalink accessible from outside of containers
       - "2333:2333"
   texas:
-    #build ??
-    image: .
+    # Built and pushed by CI (.github/workflows/build.yml) on every push to main.
+    image: ghcr.io/wladbelsky/go_texas_bot/texas_bot:main
     container_name: texas
     restart: unless-stopped
     environment:
@@ -33,6 +40,13 @@ services:
       - LAVALINK_PASSWORD=youshallnotpass
       - BOT_TOKEN=yourbottoken
       - DB_PATH=/app/data/texas_bot.db
+      # Soft limit for the Go GC, kept below the container memory limit.
+      - GOMEMLIMIT=200MiB
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
     networks:
       - lavalink
     volumes:
