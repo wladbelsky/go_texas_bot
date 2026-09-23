@@ -7,15 +7,16 @@ import (
 )
 
 func init() {
-	command_selector.CommandSelector.AddCommand("say", sayCommandListener)
+	command_selector.CommandSelector.AddCommand(command_selector.Key("say", discord.ApplicationCommandTypeSlash), sayCommandListener)
 }
 
 func sayCommandListener(event *events.ApplicationCommandInteractionCreate) error {
 	data := event.SlashCommandInteractionData()
-	err := event.CreateMessage(discord.NewMessageCreateBuilder().
-		SetContent(data.String("message")).
-		SetEphemeral(data.Bool("ephemeral")).
-		Build(),
-	)
-	return err
+	return event.CreateMessage(buildSayMessage(data.String("message"), data.Bool("ephemeral")))
+}
+
+func buildSayMessage(message string, ephemeral bool) discord.MessageCreate {
+	return discord.NewMessageCreate().
+		WithContent(message).
+		WithEphemeral(ephemeral)
 }

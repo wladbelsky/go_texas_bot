@@ -1,9 +1,12 @@
 package command_selector
 
 import (
-	"github.com/disgoorg/disgo/events"
+	"fmt"
 	"log"
 	"sync"
+
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/events"
 )
 
 type CommandFunc func(event *events.ApplicationCommandInteractionCreate) error
@@ -21,18 +24,26 @@ func newCommandSelector() *commandSelector {
 	}
 }
 
-func (cs *commandSelector) AddCommand(name string, command CommandFunc) {
-	cs.m.Lock()
-	defer cs.m.Unlock()
-	if _, ok := cs.commandMap[name]; ok {
-		log.Panicln("command already exists")
-	}
-	cs.commandMap[name] = command
+// Key builds the lookup key for a command, disambiguating same-named
+// commands that exist under different discord.ApplicationCommandType(s)
+// (e.g. a "/f" slash command and an "f" user-context-menu command can
+// share the name "f" -- Discord treats them as separate namespaces).
+func Key(name string, cmdType discord.ApplicationCommandType) string {
+	return fmt.Sprintf("%s:%d", name, cmdType)
 }
 
-func (cs *commandSelector) GetCommand(name string) (CommandFunc, bool) {
+func (cs *commandSelector) AddCommand(key string, command CommandFunc) {
+	cs.m.Lock()
+	defer cs.m.Unlock()
+	if _, ok := cs.commandMap[key]; ok {
+		log.Panicln("command already exists")
+	}
+	cs.commandMap[key] = command
+}
+
+func (cs *commandSelector) GetCommand(key string) (CommandFunc, bool) {
 	cs.m.RLock()
 	defer cs.m.RUnlock()
-	command, ok := cs.commandMap[name]
+	command, ok := cs.commandMap[key]
 	return command, ok
 }

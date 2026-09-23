@@ -2,12 +2,22 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/disgo/cache"
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/gateway"
+	"github.com/disgoorg/snowflake/v2"
 	"go_texas_bot/command"
+	musiccommands "go_texas_bot/command/commands/music"
+	"go_texas_bot/command/commands/welcome"
 	"go_texas_bot/config"
+	"go_texas_bot/db"
+	"go_texas_bot/music"
+	"go_texas_bot/registry"
 	"log"
 	"log/slog"
 	"os"
@@ -21,6 +31,16 @@ func main() {
 	if token == "" {
 		log.Panicln("token is required")
 	}
+
+	if err := db.Init(config.DBPath()); err != nil {
+		log.Panicln("error opening database:", err)
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			slog.Error("error closing database", "err", err)
+		}
+	}()
+
 	mainContext := context.Background()
 	client, err := disgo.New(
 		token,
@@ -35,12 +55,47 @@ func main() {
 				gateway.IntentGuildVoiceStates,
 			),
 		),
-		bot.WithEventListenerFunc(command.Listener))
+		bot.WithCacheConfigOpts(cache.WithCaches(cache.FlagVoiceStates|cache.FlagMembers)),
+		// Fetch every guild's full member list on connect. Without it the
+		// member cache only holds members Discord happens to send (online
+		// ones, voice, whoever interacted), so /ger kept picking the same few
+		// people and the bot itself. Needs the privileged GuildMembers intent.
+		bot.WithMemberChunkingFilter(bot.MemberChunkingFilterAll),
+		bot.WithEventListenerFunc(command.Listener),
+		bot.WithEventListenerFunc(musiccommands.ComponentListener),
+		bot.WithEventListenerFunc(onVoiceStateUpdate),
+		bot.WithEventListenerFunc(onVoiceServerUpdate),
+		bot.WithEventListenerFunc(welcome.OnMemberJoin),
+		bot.WithEventListenerFunc(welcome.OnMemberLeave),
+	)
 	if err != nil {
 		log.Panicln("error creating client:", err)
 	}
 
-	client.Rest().SetGlobalCommands(client.ApplicationID(), command.Commands)
+	// Connect to Lavalink in the background: disgolink keeps retrying until the
+	// node is up, and music commands report it as unavailable until then, so
+	// a slow or missing Lavalink never blocks the rest of the bot.
+	music.SetNotifier(func(channelID snowflake.ID, content string) {
+		if _, err := client.Rest.CreateMessage(channelID, discord.NewMessageCreate().WithContent(content)); err != nil {
+			slog.Error("music: failed to post playback notice", "channel", channelID, "err", err)
+		}
+	})
+	lavalinkCtx, stopLavalink := context.WithCancel(mainContext)
+	defer stopLavalink()
+	go func() {
+		slog.Info("connecting to lavalink", "host", config.LavalinkHost(), "port", config.LavalinkPort())
+		if err := music.Connect(lavalinkCtx, client.ApplicationID, config.LavalinkHost(), config.LavalinkPort(), config.LavalinkPassword()); err != nil {
+			if !errors.Is(err, context.Canceled) {
+				slog.Error("gave up connecting to lavalink, music commands will be unavailable", "err", err)
+			}
+			return
+		}
+		slog.Info("connected to lavalink")
+	}()
+
+	if _, err = client.Rest.SetGlobalCommands(client.ApplicationID, registry.Commands); err != nil {
+		log.Panicln("error setting global commands:", err)
+	}
 	defer client.Close(mainContext)
 	if err = client.OpenGateway(mainContext); err != nil {
 		log.Panicln("error opening gateway:", err)
@@ -50,4 +105,27 @@ func main() {
 	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM)
 	<-s
 	slog.Info("Shutdown signal received, shutting down client")
+}
+
+// onVoiceStateUpdate forwards the bot's own voice state changes to
+// disgolink, which needs them to keep its players' voice connections in
+// sync, and drops the guild's music queue once the bot leaves the channel.
+func onVoiceStateUpdate(event *events.GuildVoiceStateUpdate) {
+	lavalinkClient := music.Client()
+	if lavalinkClient == nil || event.VoiceState.UserID != event.Client().ApplicationID {
+		return
+	}
+	lavalinkClient.OnVoiceStateUpdate(context.Background(), event.VoiceState.GuildID, event.VoiceState.ChannelID, event.VoiceState.SessionID)
+	if event.VoiceState.ChannelID == nil {
+		music.Queues.Delete(event.VoiceState.GuildID)
+	}
+}
+
+// onVoiceServerUpdate forwards voice server updates to disgolink.
+func onVoiceServerUpdate(event *events.VoiceServerUpdate) {
+	lavalinkClient := music.Client()
+	if lavalinkClient == nil || event.Endpoint == nil {
+		return
+	}
+	lavalinkClient.OnVoiceServerUpdate(context.Background(), event.GuildID, event.Token, *event.Endpoint)
 }
