@@ -80,6 +80,10 @@ func playCommandListener(event *events.ApplicationCommandInteractionCreate) erro
 
 	requesterID := event.User().ID
 	queue := musicpkg.Queues.Get(guildID)
+	// Playback failures reported later by Lavalink go to this channel.
+	if channel := event.Channel(); channel.MessageChannel != nil {
+		queue.SetTextChannel(channel.ID())
+	}
 
 	var toPlay *lavalink.Track
 	var alreadyQueued bool

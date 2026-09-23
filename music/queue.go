@@ -63,6 +63,13 @@ type Queue struct {
 	tracks     []lavalink.Track
 	position   int // index of the current track; -1 before anything has played
 	repeatMode RepeatMode
+
+	// textChannelID is where playback problems for this guild are reported:
+	// the channel /play was last used in.
+	textChannelID snowflake.ID
+	// failStreak counts tracks that failed to play in a row, so SkipFailed
+	// can stop instead of cycling forever through an unplayable queue.
+	failStreak int
 }
 
 // NewQueue returns an empty queue.
@@ -138,11 +145,35 @@ func (q *Queue) History() []lavalink.Track {
 	return append([]lavalink.Track(nil), q.tracks[:end]...)
 }
 
-// Add appends tracks to the end of the queue.
+// Add appends tracks to the end of the queue. New tracks get a fresh chance
+// to play, so this also resets the failure streak.
 func (q *Queue) Add(tracks ...lavalink.Track) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.tracks = append(q.tracks, tracks...)
+	q.failStreak = 0
+}
+
+// SetTextChannel records the channel playback problems should be reported in.
+func (q *Queue) SetTextChannel(channelID snowflake.ID) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.textChannelID = channelID
+}
+
+// TextChannel returns the channel set by SetTextChannel, or 0 if none.
+func (q *Queue) TextChannel() snowflake.ID {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return q.textChannelID
+}
+
+// ResetFailures clears the failure streak; call it when a track plays
+// through, so earlier failures don't count towards stopping the queue.
+func (q *Queue) ResetFailures() {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.failStreak = 0
 }
 
 // RepeatMode returns the queue's current repeat mode.
@@ -165,6 +196,7 @@ func (q *Queue) Clear() {
 	defer q.mu.Unlock()
 	q.tracks = nil
 	q.position = -1
+	q.failStreak = 0
 }
 
 // Shuffle randomizes the order of the upcoming (not yet played) tracks.
@@ -187,12 +219,33 @@ func (q *Queue) Shuffle() {
 func (q *Queue) Advance() (track lavalink.Track, ok bool) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	return q.advanceLocked(q.repeatMode == RepeatOne)
+}
 
+// SkipFailed moves past a track that failed to play and returns the next
+// one. Unlike Advance it ignores RepeatOne, since replaying the failed track
+// would just fail again. ok is false when there's nothing left, and also
+// once every track in the queue has failed in a row (so RepeatAll over
+// unplayable tracks stops instead of looping forever); exhausted reports
+// that second case.
+func (q *Queue) SkipFailed() (track lavalink.Track, ok bool, exhausted bool) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	q.failStreak++
+	if q.failStreak >= len(q.tracks) && q.repeatMode != RepeatNone {
+		return lavalink.Track{}, false, true
+	}
+	track, ok = q.advanceLocked(false)
+	return track, ok, false
+}
+
+func (q *Queue) advanceLocked(repeatCurrent bool) (lavalink.Track, bool) {
 	if len(q.tracks) == 0 {
 		return lavalink.Track{}, false
 	}
 
-	if q.repeatMode == RepeatOne && q.position >= 0 {
+	if repeatCurrent && q.position >= 0 {
 		return q.currentLocked()
 	}
 

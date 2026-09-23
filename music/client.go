@@ -42,7 +42,11 @@ var Queues = NewManager()
 // Once connected, disgolink also reconnects on its own if the websocket to
 // Lavalink drops later on.
 func Connect(ctx context.Context, botUserID snowflake.ID, host string, port int, password string) error {
-	c := disgolink.New(botUserID, disgolink.WithListenerFunc(onTrackEnd))
+	c := disgolink.New(botUserID,
+		disgolink.WithListenerFunc(onTrackEnd),
+		disgolink.WithListenerFunc(onTrackException),
+		disgolink.WithListenerFunc(onTrackStuck),
+	)
 	if _, err := c.AddNode(ctx, disgolink.NodeConfig{
 		Name:     "main",
 		Address:  fmt.Sprintf("%s:%d", host, port),

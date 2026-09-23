@@ -294,3 +294,71 @@ func TestQueue_At(t *testing.T) {
 		t.Fatal("expected At() with a negative index to fail")
 	}
 }
+
+func TestSkipFailed_IgnoresRepeatOne(t *testing.T) {
+	q := NewQueue()
+	q.Add(track("a"), track("b"))
+	q.SetRepeatMode(RepeatOne)
+	q.Advance() // playing "a"
+
+	next, ok, exhausted := q.SkipFailed()
+	if !ok || exhausted || next.Info.Title != "b" {
+		t.Fatalf("SkipFailed() = (%q, %v, %v), want (\"b\", true, false): a failed track must not be replayed", next.Info.Title, ok, exhausted)
+	}
+}
+
+func TestSkipFailed_StopsWhenWholeRepeatAllQueueFails(t *testing.T) {
+	q := NewQueue()
+	q.Add(track("a"), track("b"), track("c"))
+	q.SetRepeatMode(RepeatAll)
+	q.Advance() // playing "a"
+
+	for i, want := range []string{"b", "c"} {
+		next, ok, exhausted := q.SkipFailed()
+		if !ok || exhausted || next.Info.Title != want {
+			t.Fatalf("SkipFailed() #%d = (%q, %v, %v), want (%q, true, false)", i+1, next.Info.Title, ok, exhausted, want)
+		}
+	}
+	if _, ok, exhausted := q.SkipFailed(); ok || !exhausted {
+		t.Fatalf("SkipFailed() after every track failed = (ok=%v, exhausted=%v), want (false, true)", ok, exhausted)
+	}
+}
+
+func TestSkipFailed_EndOfQueueWithoutRepeat(t *testing.T) {
+	q := NewQueue()
+	q.Add(track("a"))
+	q.Advance()
+
+	if _, ok, exhausted := q.SkipFailed(); ok || exhausted {
+		t.Fatalf("SkipFailed() at the end of a non-repeating queue = (ok=%v, exhausted=%v), want (false, false)", ok, exhausted)
+	}
+}
+
+func TestSkipFailed_StreakResetsOnSuccessAndNewTracks(t *testing.T) {
+	q := NewQueue()
+	q.Add(track("a"), track("b"))
+	q.SetRepeatMode(RepeatAll)
+	q.Advance()
+
+	q.SkipFailed() // "a" failed
+	q.ResetFailures()
+	if _, ok, _ := q.SkipFailed(); !ok {
+		t.Fatal("a track that played through must reset the failure streak")
+	}
+
+	q.Add(track("c"))
+	if _, ok, _ := q.SkipFailed(); !ok {
+		t.Fatal("adding tracks must reset the failure streak")
+	}
+}
+
+func TestQueue_TextChannel(t *testing.T) {
+	q := NewQueue()
+	if q.TextChannel() != 0 {
+		t.Fatal("new queue must have no text channel")
+	}
+	q.SetTextChannel(42)
+	if q.TextChannel() != 42 {
+		t.Fatalf("TextChannel() = %v, want 42", q.TextChannel())
+	}
+}

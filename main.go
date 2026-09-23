@@ -7,8 +7,10 @@ import (
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/cache"
+	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/gateway"
+	"github.com/disgoorg/snowflake/v2"
 	"go_texas_bot/command"
 	musiccommands "go_texas_bot/command/commands/music"
 	"go_texas_bot/command/commands/welcome"
@@ -68,6 +70,11 @@ func main() {
 	// Connect to Lavalink in the background: disgolink keeps retrying until the
 	// node is up, and music commands report it as unavailable until then, so
 	// a slow or missing Lavalink never blocks the rest of the bot.
+	music.SetNotifier(func(channelID snowflake.ID, content string) {
+		if _, err := client.Rest.CreateMessage(channelID, discord.NewMessageCreate().WithContent(content)); err != nil {
+			slog.Error("music: failed to post playback notice", "channel", channelID, "err", err)
+		}
+	})
 	lavalinkCtx, stopLavalink := context.WithCancel(mainContext)
 	defer stopLavalink()
 	go func() {
