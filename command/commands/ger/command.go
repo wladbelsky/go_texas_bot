@@ -39,7 +39,7 @@ var selfPhrases = []string{
 
 // gerCooldown mirrors the original bot's per-guild-per-user /ger cooldown
 // (config.json ger.ger_cooldown=79200s).
-var gerCooldown = cooldown.New(22 * time.Hour)
+var gerCooldown = cooldown.New("ger", 22*time.Hour)
 
 var errNoOtherMembers = errors.New("на сервере больше никого нет, не в кого пукать")
 
@@ -50,7 +50,11 @@ func gerCommandListener(event *events.ApplicationCommandInteractionCreate) error
 	}
 
 	authorID := event.User().ID
-	if remaining := gerCooldown.Reserve(guildID.String(), authorID.String()); remaining > 0 {
+	remaining, err := gerCooldown.Reserve(guildID.String(), authorID.String())
+	if err != nil {
+		return err
+	}
+	if remaining > 0 {
 		return respondEphemeral(event, fmt.Sprintf("Не так быстро! Попробуй снова через %s.", remaining.Round(time.Second)))
 	}
 

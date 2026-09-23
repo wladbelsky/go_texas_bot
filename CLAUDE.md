@@ -27,7 +27,7 @@ CI (`.github/workflows/build.yml`) runs `go test ./...` and then builds the amd6
 | `registry/` | `Commands`: every slash/user command definition sent to Discord. |
 | `command/` | `Listener` dispatches interactions by `(name, type)` key; `sendError`; `register.go` blank-imports every command package. |
 | `command/command_selector/` | `Key(name, cmdType)`, the handler map key. |
-| `command/cooldown/` | Per-guild-per-user cooldown `Tracker`. |
+| `command/cooldown/` | Per-guild-per-user cooldown `Tracker`, stored in the `db.Cooldown` table (keyed by command name) so cooldowns survive restarts. |
 | `command/embedutil/` | `ChunkLines` for splitting long text across embed fields. |
 | `command/commands/*` | One package per command group. `default/` is package `defaultcmd` (`default` is a keyword). `welcome/` holds gateway member join/leave listeners, not commands. |
 
@@ -57,7 +57,7 @@ CI (`.github/workflows/build.yml`) runs `go test ./...` and then builds the amd6
 - Every new model must be added to `AutoMigrate` in `db/db.go`.
 - Global counters are singleton rows with `ID: 1`, loaded with `FirstOrCreate` (`GerStats`, `ArkStats`).
 - `ArkCollectionEntry` is keyed by `Character.DisplayName()`. Renaming an operator in the data orphans existing collection rows.
-- Cooldowns: `Reserve` at the start of the command (this blocks concurrent double use), and `Release` on every error/refusal path so a failed command doesn't burn the cooldown.
+- Cooldowns: `Reserve` at the start of the command (a single upsert, so concurrent double use is blocked; it returns an error on DB failure), and `Release` on every error/refusal path so a failed command doesn't burn the cooldown. The `cooldown.New` name is part of the stored key: keep it unique and stable.
 - `arknights/data/characters.json` and `skins.json` are trimmed copies of the en_US `character_table` / `skin_table` from [Aceship/AN-EN-Tags](https://github.com/Aceship/AN-EN-Tags). Only obtainable 3–6★ operators are included, with the fields of `arknights.Character` / `arknights.Skin`. There is no generator script; when refreshing, keep the same shape and run the `arknights` tests.
 
 ## Content and behavior policy

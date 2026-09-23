@@ -45,3 +45,14 @@ type UserGerCounter struct {
 	Uses   int
 	Hits   int
 }
+
+// Cooldown is a running per-guild-per-user command cooldown. Rows are keyed
+// by command so every command.cooldown.Tracker shares this one table.
+// ExpiresAt is unix milliseconds, so expiry can be compared in SQL without
+// depending on how the driver serializes times.
+type Cooldown struct {
+	GuildID   string `gorm:"primaryKey"`
+	UserID    string `gorm:"primaryKey"`
+	Command   string `gorm:"primaryKey"`
+	ExpiresAt int64
+}

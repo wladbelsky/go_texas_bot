@@ -8,4 +8,4 @@ import (
 
 // rollCooldown mirrors the original bot's per-guild-per-user /ark cooldown
 // (config.json ark.ark_cooldown=14400s).
-var rollCooldown = cooldown.New(4 * time.Hour)
+var rollCooldown = cooldown.New("ark", 4*time.Hour)
