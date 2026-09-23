@@ -56,6 +56,11 @@ func main() {
 			),
 		),
 		bot.WithCacheConfigOpts(cache.WithCaches(cache.FlagVoiceStates|cache.FlagMembers)),
+		// Fetch every guild's full member list on connect. Without it the
+		// member cache only holds members Discord happens to send (online
+		// ones, voice, whoever interacted), so /ger kept picking the same few
+		// people and the bot itself. Needs the privileged GuildMembers intent.
+		bot.WithMemberChunkingFilter(bot.MemberChunkingFilterAll),
 		bot.WithEventListenerFunc(command.Listener),
 		bot.WithEventListenerFunc(musiccommands.ComponentListener),
 		bot.WithEventListenerFunc(onVoiceStateUpdate),
