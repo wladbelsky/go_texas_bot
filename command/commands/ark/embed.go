@@ -6,6 +6,7 @@ import (
 
 	"github.com/disgoorg/disgo/discord"
 	"go_texas_bot/arknights"
+	"go_texas_bot/command/embedutil"
 )
 
 const embedColor = 0xff9900 // matches the original bot's config.json embed_color
@@ -80,7 +81,13 @@ func collectionEmbed(displayName string, owned int, total int, byRarity map[int]
 		for _, r := range rows {
 			lines = append(lines, fmt.Sprintf("%s x %d", r.Name, r.Count))
 		}
-		embed.Fields = append(embed.Fields, blockField(stars(rarity), strings.Join(lines, "\n")))
+		for i, chunk := range embedutil.ChunkLines(lines, embedutil.MaxFieldValueLen) {
+			name := stars(rarity)
+			if i > 0 {
+				name = fmt.Sprintf("Продолжение %d★", rarity)
+			}
+			embed.Fields = append(embed.Fields, blockField(name, chunk))
+		}
 	}
 
 	embed.Footer = &discord.EmbedFooter{Text: "Используй команду /myark <имя>, чтоб посмотреть на персонажа."}

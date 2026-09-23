@@ -22,8 +22,16 @@ func Listener(event *events.ApplicationCommandInteractionCreate) {
 
 func sendError(event *events.ApplicationCommandInteractionCreate, err error) {
 	slog.Error("command error", "err", err)
-	if sendErr := event.CreateMessage(buildErrorMessage(err)); sendErr != nil {
-		slog.Error("error sending error message", "err", sendErr)
+	msg := buildErrorMessage(err)
+	if createErr := event.CreateMessage(msg); createErr == nil {
+		return
+	}
+	// Handlers that called DeferCreateMessage have already acknowledged the
+	// interaction, so Discord rejects a second create; edit the deferred
+	// response instead, or the user is left looking at "thinking..." forever.
+	if _, updateErr := event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(),
+		discord.NewMessageUpdate().WithContent(msg.Content)); updateErr != nil {
+		slog.Error("error sending error message", "err", updateErr)
 	}
 }
 

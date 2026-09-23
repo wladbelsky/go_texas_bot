@@ -11,11 +11,11 @@ package help
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"go_texas_bot/command/command_selector"
+	"go_texas_bot/command/embedutil"
 	"go_texas_bot/registry"
 )
 
@@ -41,23 +41,10 @@ func helpCommandListener(event *events.ApplicationCommandInteractionCreate) erro
 // duplicate a slash command already listed, and have no description of
 // their own to show).
 func commandFields() []discord.EmbedField {
-	lines := commandLines()
-
-	const maxFieldLen = 1000
-	var fields []discord.EmbedField
-	var current strings.Builder
-	for _, line := range lines {
-		if current.Len() > 0 && current.Len()+len(line)+1 > maxFieldLen {
-			fields = append(fields, commandsField(len(fields), current.String()))
-			current.Reset()
-		}
-		if current.Len() > 0 {
-			current.WriteByte('\n')
-		}
-		current.WriteString(line)
-	}
-	if current.Len() > 0 {
-		fields = append(fields, commandsField(len(fields), current.String()))
+	chunks := embedutil.ChunkLines(commandLines(), embedutil.MaxFieldValueLen)
+	fields := make([]discord.EmbedField, len(chunks))
+	for i, chunk := range chunks {
+		fields[i] = commandsField(i, chunk)
 	}
 	return fields
 }

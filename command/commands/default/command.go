@@ -63,27 +63,51 @@ func inviteCommandListener(event *events.ApplicationCommandInteractionCreate) er
 	return respondEphemeral(event, url)
 }
 
-// targetMember resolves the "other member" for f/o7/avatar: the "member"
-// slash option if this is a slash invocation, or the right-clicked member
-// for a user-context-menu invocation. ok is false for a slash invocation
-// with no member option given.
-func targetMember(event *events.ApplicationCommandInteractionCreate) (discord.Member, bool) {
+type target struct {
+	User discord.User
+	Name string
+}
+
+// resolveTarget resolves the "other user" for f/o7/avatar: the "member"
+// slash option if this is a slash invocation, or the right-clicked user for
+// a user-context-menu invocation. ok is false for a slash invocation with no
+// member option given. Resolved users are always present, resolved members
+// only in guilds -- so the user is the base, with the member's nickname
+// used when there is one.
+func resolveTarget(event *events.ApplicationCommandInteractionCreate) (target, bool) {
+	var user discord.User
+	var member discord.ResolvedMember
+	var hasMember bool
 	switch event.Data.Type() {
 	case discord.ApplicationCommandTypeUser:
-		return event.UserCommandInteractionData().TargetMember().Member, true
+		data := event.UserCommandInteractionData()
+		user = data.TargetUser()
+		member, hasMember = data.Resolved.Members[data.TargetID()]
 	default:
-		m, ok := event.SlashCommandInteractionData().OptMember("member")
-		return m.Member, ok
+		data := event.SlashCommandInteractionData()
+		var ok bool
+		if user, ok = data.OptUser("member"); !ok {
+			return target{}, false
+		}
+		member, hasMember = data.OptMember("member")
 	}
+	return target{User: user, Name: targetDisplayName(member, hasMember, user)}, true
+}
+
+func targetDisplayName(member discord.ResolvedMember, hasMember bool, user discord.User) string {
+	if hasMember {
+		return member.EffectiveName()
+	}
+	return user.EffectiveName()
 }
 
 func fCommandListener(event *events.ApplicationCommandInteractionCreate) error {
 	author := event.Member()
-	target, hasTarget := targetMember(event)
+	target, hasTarget := resolveTarget(event)
 
 	title := fmt.Sprintf("**%s** заплатил увожение. o7", memberName(event, author))
 	if hasTarget {
-		title = fmt.Sprintf("**%s** заплатил увожение за %s", memberName(event, author), target.EffectiveName())
+		title = fmt.Sprintf("**%s** заплатил увожение за %s", memberName(event, author), target.Name)
 	}
 
 	embed := discord.Embed{
@@ -96,11 +120,11 @@ func fCommandListener(event *events.ApplicationCommandInteractionCreate) error {
 
 func o7CommandListener(event *events.ApplicationCommandInteractionCreate) error {
 	author := event.Member()
-	target, hasTarget := targetMember(event)
+	target, hasTarget := resolveTarget(event)
 
 	title := fmt.Sprintf("**%s** приветствует вас командиры. o7", memberName(event, author))
 	if hasTarget {
-		title = fmt.Sprintf("**%s** приветствует %s. o7", memberName(event, author), target.EffectiveName())
+		title = fmt.Sprintf("**%s** приветствует %s. o7", memberName(event, author), target.Name)
 	}
 
 	embed := discord.Embed{
@@ -112,7 +136,7 @@ func o7CommandListener(event *events.ApplicationCommandInteractionCreate) error 
 }
 
 func avatarCommandListener(event *events.ApplicationCommandInteractionCreate) error {
-	target, ok := targetMember(event)
+	target, ok := resolveTarget(event)
 	if !ok {
 		return respondEphemeral(event, "Укажи участника через параметр member.")
 	}

@@ -88,3 +88,28 @@ func TestCollectionEmbed_ListsRaritiesHighToLow(t *testing.T) {
 		t.Fatalf("expected the 3-star field second, got %+v", embed.Fields[1])
 	}
 }
+
+func TestCollectionEmbed_ChunksLongRarityUnderFieldLimit(t *testing.T) {
+	var rows []collectionRow
+	for _, c := range arknights.ByRarity(5) {
+		rows = append(rows, collectionRow{Name: c.DisplayName(), Count: 12})
+	}
+	embed := collectionEmbed("Someone", len(rows), arknights.Count(), map[int][]collectionRow{5: rows})
+
+	if len(embed.Fields) < 2 {
+		t.Fatalf("expected every 5-star to need more than one field, got %d field(s)", len(embed.Fields))
+	}
+	if len(embed.Fields) > 25 {
+		t.Fatalf("got %d fields, over Discord's 25-field embed limit", len(embed.Fields))
+	}
+	listed := 0
+	for _, f := range embed.Fields {
+		if len(f.Value) > 1024 {
+			t.Fatalf("field %q is %d chars, over Discord's 1024 limit", f.Name, len(f.Value))
+		}
+		listed += strings.Count(f.Value, "\n") + 1
+	}
+	if listed != len(rows) {
+		t.Fatalf("fields list %d operators, want all %d", listed, len(rows))
+	}
+}
