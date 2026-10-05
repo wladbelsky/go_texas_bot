@@ -7,54 +7,11 @@ import (
 	"log/slog"
 )
 
-var Commands = []discord.ApplicationCommandCreate{
-	discord.SlashCommandCreate{
-		Name: "say",
-		NameLocalizations: map[discord.Locale]string{
-			discord.LocaleEnglishGB: "say",
-			discord.LocaleRussian:   "скажи",
-		},
-		Description: "says what you say",
-		DescriptionLocalizations: map[discord.Locale]string{
-			discord.LocaleEnglishGB: "says what you say",
-			discord.LocaleRussian:   "говорит то, что вы говорите",
-		},
-		Options: []discord.ApplicationCommandOption{
-			discord.ApplicationCommandOptionString{
-				Name: "message",
-				NameLocalizations: map[discord.Locale]string{
-					discord.LocaleEnglishGB: "message",
-					discord.LocaleRussian:   "сообщение",
-				},
-				Description: "What to say",
-				DescriptionLocalizations: map[discord.Locale]string{
-					discord.LocaleEnglishGB: "What to say",
-					discord.LocaleRussian:   "Что сказать",
-				},
-				Required: true,
-			},
-			discord.ApplicationCommandOptionBool{
-				Name: "ephemeral",
-				NameLocalizations: map[discord.Locale]string{
-					discord.LocaleEnglishGB: "ephemeral",
-					discord.LocaleRussian:   "скрытый",
-				},
-				Description: "If the response should only be visible to you",
-				DescriptionLocalizations: map[discord.Locale]string{
-					discord.LocaleEnglishGB: "If the response should only be visible to you",
-					discord.LocaleRussian:   "Если ответ должен быть виден только вам",
-				},
-				Required: true,
-			},
-		},
-	},
-}
-
 func Listener(event *events.ApplicationCommandInteractionCreate) {
-	data := event.SlashCommandInteractionData()
-	command, ok := command_selector.CommandSelector.GetCommand(data.CommandName())
+	key := command_selector.Key(event.Data.CommandName(), event.Data.Type())
+	command, ok := command_selector.CommandSelector.GetCommand(key)
 	if !ok {
-		slog.Error("command not found")
+		slog.Error("command not found", "key", key)
 		return
 	}
 	err := command(event)
@@ -64,13 +21,22 @@ func Listener(event *events.ApplicationCommandInteractionCreate) {
 }
 
 func sendError(event *events.ApplicationCommandInteractionCreate, err error) {
-	slog.Error("command error:", err)
-	err = event.CreateMessage(discord.NewMessageCreateBuilder().
-		SetContent("The command failed to execute.\nError: " + err.Error()).
-		SetEphemeral(true).
-		Build(),
-	)
-	if err != nil {
-		slog.Error("error sending error message:", err)
+	slog.Error("command error", "err", err)
+	msg := buildErrorMessage(err)
+	if createErr := event.CreateMessage(msg); createErr == nil {
+		return
 	}
+	// Handlers that called DeferCreateMessage have already acknowledged the
+	// interaction, so Discord rejects a second create; edit the deferred
+	// response instead, or the user is left looking at "thinking..." forever.
+	if _, updateErr := event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(),
+		discord.NewMessageUpdate().WithContent(msg.Content)); updateErr != nil {
+		slog.Error("error sending error message", "err", updateErr)
+	}
+}
+
+func buildErrorMessage(err error) discord.MessageCreate {
+	return discord.NewMessageCreate().
+		WithContent("The command failed to execute.\nError: " + err.Error()).
+		WithEphemeral(true)
 }

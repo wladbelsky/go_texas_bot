@@ -11,6 +11,7 @@ var (
 	lavalinkHost     = flag.String("lavalink-host", "", "lavalink host")
 	lavalinkPort     = flag.String("lavalink-port", "", "lavalink port")
 	lavalinkPassword = flag.String("lavalink-password", "", "lavalink password")
+	dbPath           = flag.String("db-path", "data/texas_bot.db", "path to the sqlite database file")
 )
 
 func getFlagOrEnvString(flagName string, envName string) string {
@@ -49,4 +50,8 @@ func LavalinkPort() int {
 
 func LavalinkPassword() string {
 	return getFlagOrEnvString("lavalink-password", "LAVALINK_PASSWORD")
+}
+
+func DBPath() string {
+	return getFlagOrEnvString("db-path", "DB_PATH")
 }

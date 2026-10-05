@@ -1,0 +1,61 @@
+# Lavalink v4 config. Mounted into the lavalink container by docker-compose.yml.
+#
+# Plugin versions below were current as of writing this file; Lavalink
+# plugins (youtube-source especially, since YouTube keeps changing its
+# anti-bot checks) update often enough that it's worth checking
+# https://lavalink.dev/plugins for newer releases before deploying.
+lavalink:
+  plugins:
+    # YouTube playback. Lavalink's own built-in YouTube source is
+    # deprecated; this is the actively maintained replacement.
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.18.2"
+      repository: "https://maven.lavalink.dev/releases"
+    # Resolves Spotify/Apple Music/Deezer/Yandex Music links and searches
+    # by playing the matching track from a "direct" source (YouTube by
+    # default) -- see the spotify/applemusic/deezer sections below.
+    - dependency: "com.github.topi314.lavasrc:lavasrc-plugin:4.8.0"
+      repository: "https://maven.lavalink.dev/releases"
+  server:
+    password: "${LAVALINK_SERVER_PASSWORD}"
+    sources:
+      youtube: false # handled by the youtube-plugin above instead
+      bandcamp: true
+      soundcloud: true
+      twitch: true
+      vimeo: true
+      http: true
+      local: false
+
+plugins:
+  youtube:
+    enabled: true
+    clients:
+      - MUSIC
+      - WEB
+      - WEBEMBEDDED
+      - ANDROID_VR
+      - IOS
+  lavasrc:
+    providers:
+      # Order matters: LavaSrc tries these in turn to resolve a track.
+      - "ytsearch:\"%ISRC%\""
+      - "ytsearch:%QUERY%"
+    sources:
+      spotify: true
+      applemusic: false
+      deezer: false
+      yandexmusic: false
+    spotify:
+      clientId: "${SPOTIFY_CLIENT_ID}"
+      clientSecret: "${SPOTIFY_CLIENT_SECRET}"
+      # ISO 3166-1 alpha-2 country code, used for Spotify's market-specific catalog.
+      countryCode: "US"
+
+server:
+  port: 2333
+  address: 0.0.0.0
+
+logging:
+  level:
+    root: INFO
+    lavalink: INFO

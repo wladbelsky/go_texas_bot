@@ -4,6 +4,13 @@ MAINTAINER wladbelsky <raf520wb@gmail.com>
 
 ARG TARGETARCH
 
+# The ubuntu base image ships without root CA certificates; without them
+# every HTTPS request (Discord API, waifu.pics) fails with
+# "x509: certificate signed by unknown authority".
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN mkdir "/app"
 
 # texas_bot is the name of the binary file

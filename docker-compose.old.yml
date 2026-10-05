@@ -1,11 +1,27 @@
+# Legacy variant of docker-compose.yml for the old Python docker-compose
+# (v1, e.g. 1.25 from the Ubuntu 20.04 apt repo), which can't read the
+# versionless Compose Spec file. Run it with:
+#
+#   docker-compose -f docker-compose.old.yml up -d
+#
+# It uses file format 2.4, the last 2.x format and the one that still has
+# per-container resource limits (cpus / mem_limit) and
+# depends_on "condition: service_healthy". In 3.x, limits moved to
+# deploy.resources (ignored by docker-compose v1 without --compatibility)
+# and depends_on conditions were removed.
+#
+# Keep it in sync with docker-compose.yml. If you can, install Compose v2
+# (the "docker compose" plugin) and use docker-compose.yml instead.
+version: "2.4"
+
 services:
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4
     container_name: lavalink
     restart: unless-stopped
     environment:
-      # Keep the heap below the memory limit in deploy.resources, leaving
-      # headroom for the JVM's off-heap memory (threads, buffers, metaspace).
+      # Keep the heap below mem_limit, leaving headroom for the JVM's
+      # off-heap memory (threads, buffers, metaspace).
       - _JAVA_OPTIONS=-Xmx1G
       - SERVER_PORT=2333
       - LAVALINK_SERVER_PASSWORD=youshallnotpass
@@ -25,11 +41,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
-    deploy:
-      resources:
-        limits:
-          cpus: "2"
-          memory: 1536M
+    cpus: 2
+    mem_limit: 1536m
     networks:
       - lavalink
     expose:
@@ -55,17 +68,15 @@ services:
       - LAVALINK_PASSWORD=youshallnotpass
       - BOT_TOKEN=yourbottoken
       - DB_PATH=/app/data/texas_bot.db
-      # Soft limit for the Go GC, kept below the container memory limit.
+      # Soft limit for the Go GC, kept below mem_limit.
       - GOMEMLIMIT=200MiB
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
+    cpus: 0.5
+    mem_limit: 256m
     networks:
       - lavalink
     volumes:
       - ./data:/app/data
+
 networks:
   lavalink:
     name: lavalink
