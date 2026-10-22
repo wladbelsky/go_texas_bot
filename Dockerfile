@@ -9,6 +9,7 @@ ARG TARGETARCH
 # "x509: certificate signed by unknown authority".
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
+    && apt-get install -y --only-upgrade ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir "/app"
