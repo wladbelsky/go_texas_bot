@@ -43,13 +43,16 @@ func (t *Tracker) Reserve(guildID, userID string) (time.Duration, error) {
 	return remaining, err
 }
 
+// now is the clock, swapped out in tests.
+var now = time.Now
+
 // errGone means the running cooldown vanished while being read.
 var errGone = errors.New("cooldown: running cooldown vanished while reserving")
 
 func (t *Tracker) tryReserve(guildID, userID string) (time.Duration, error) {
-	now := time.Now()
-	nowMs := now.UnixMilli()
-	expiresAt := now.Add(t.duration).UnixMilli()
+	start := now()
+	nowMs := start.UnixMilli()
+	expiresAt := start.Add(t.duration).UnixMilli()
 
 	// Insert the cooldown, or take over an existing row only if it has
 	// already expired. RowsAffected is 0 exactly when a cooldown is running.
