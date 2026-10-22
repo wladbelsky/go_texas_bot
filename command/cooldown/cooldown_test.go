@@ -73,11 +73,22 @@ func TestRelease_RefundsTheCooldown(t *testing.T) {
 	}
 }
 
+// fakeClock replaces the package clock for the test and returns a function
+// that moves it forward.
+func fakeClock(t *testing.T) (advance func(time.Duration)) {
+	t.Helper()
+	current := time.Now()
+	now = func() time.Time { return current }
+	t.Cleanup(func() { now = time.Now })
+	return func(d time.Duration) { current = current.Add(d) }
+}
+
 func TestReserve_ExpiresAfterDuration(t *testing.T) {
 	openTestDB(t)
-	c := New("test", 5*time.Millisecond)
+	advance := fakeClock(t)
+	c := New("test", time.Hour)
 	mustReserve(t, c, "g", "u")
-	time.Sleep(20 * time.Millisecond)
+	advance(time.Hour)
 	if remaining := mustReserve(t, c, "g", "u"); remaining != 0 {
 		t.Fatalf("Reserve() after the cooldown elapsed = %v, want 0", remaining)
 	}
